@@ -83,11 +83,8 @@ export default function OwnerDashboard() {
         {/* Top Header */}
         <header className="bg-gradient-to-r from-amber-800 to-amber-900 text-white shadow-md p-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 hover:bg-amber-700 rounded-lg transition"
-            >
-              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            <button onClick={() => setSidebarOpen(!sidebarOpen)}>
+              {sidebarOpen ? <X /> : <Menu />}
             </button>
             <h2 className="text-3xl font-bold">Dashboard Monitoring</h2>
           </div>

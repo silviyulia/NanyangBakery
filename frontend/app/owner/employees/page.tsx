@@ -1,8 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Menu, X, LogOut } from "lucide-react";
+import {   Menu,
+  BarChart3,
+  Package,
+  AlertTriangle,
+  TrendingUp,
+  User,
+  LogOut,
+  X, } from "lucide-react";
 import Link from "next/link";
 
 export default function EmployeesPage() {
@@ -72,11 +79,8 @@ export default function EmployeesPage() {
         {/* Top Header */}
         <header className="bg-gradient-to-r from-amber-800 to-amber-900 text-white shadow-md p-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 hover:bg-amber-700 rounded-lg transition"
-            >
-              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            <button onClick={() => setSidebarOpen(!sidebarOpen)}>
+              {sidebarOpen ? <X /> : <Menu />}
             </button>
             <h2 className="text-3xl font-bold">Karyawan</h2>
           </div>

@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Menu, X, LogOut } from "lucide-react";
+import {  Menu,
+  BarChart3,
+  Package,
+  AlertTriangle,
+  TrendingUp,
+  User,
+  LogOut,
+  X, } from "lucide-react";
 import Link from "next/link";
 
 export default function InventoryPage() {
@@ -70,15 +77,24 @@ export default function InventoryPage() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Top Header */}
-        <header className="bg-gradient-to-r from-amber-800 to-amber-900 text-white shadow-md p-6 flex items-center justify-between">
+         <header className="bg-gradient-to-r from-amber-800 to-amber-900 text-white shadow-md p-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 hover:bg-amber-700 rounded-lg transition"
-            >
-              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            <button onClick={() => setSidebarOpen(!sidebarOpen)}>
+              {sidebarOpen ? <X /> : <Menu />}
             </button>
-            <h2 className="text-3xl font-bold">Stok Bahan</h2>
+            <h2 className="text-3xl font-bold">Dashboard Monitoring</h2>
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
+              🔔 Notifikasi (3)
+            </button>
+            <div className="flex items-center gap-2 bg-amber-500 bg-opacity-20 px-4 py-2 rounded-lg">
+              <User size={20} />
+              <div>
+                <p className="text-sm font-semibold">Admin User</p>
+                <p className="text-xs text-amber-200">Owner</p>
+              </div>
+            </div>
           </div>
         </header>
 

@@ -1,15 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Menu, X, LogOut } from "lucide-react";
+import {
+  Menu,
+  BarChart3,
+  Package,
+  AlertTriangle,
+  TrendingUp,
+  User,
+  LogOut,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { ordersData } from "../../lib/orders";
+
+// 🔹 TYPE
+type Order = {
+  id: string;
+  table: string;
+  status: "proses" | "selesai" | "batal";
+  waiter: string;
+  total: number;
+  items: {
+    name: string;
+    qty: number;
+    price: number;
+  }[];
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+};
 
 export default function OrdersPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeFilter, setActiveFilter] = useState("semua");
+  const [now, setNow] = useState<Date>(new Date());
 
   const menuItems = [
     { name: "Dashboard", icon: "📊", href: "/owner" },
@@ -21,12 +48,22 @@ export default function OrdersPage() {
     { name: "Karyawan", icon: "👥", href: "/owner/employees" },
   ];
 
-  const orders = ordersData;
+  // 🔹 REAL TIME CLOCK
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const orders: Order[] = ordersData;
 
   const filteredOrders = orders.filter(
     (order) => activeFilter === "semua" || order.status === activeFilter,
   );
 
+  // 🔹 STATUS STYLE
   const getStatusColor = (status: string) => {
     switch (status) {
       case "selesai":
@@ -53,9 +90,31 @@ export default function OrdersPage() {
     }
   };
 
+  // 🔹 FORMAT JAM
+  const formatTime = (date?: string) => {
+    if (!date) return "-";
+    return new Date(date).toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  // 🔹 DURASI MEJA DIPAKAI (REAL TIME)
+  const getDuration = (start?: string) => {
+    if (!start) return "-";
+
+    const startTime = new Date(start).getTime();
+    const diff = Math.floor((now.getTime() - startTime) / 1000);
+
+    const minutes = Math.floor(diff / 60);
+    const seconds = diff % 60;
+
+    return `${minutes}m ${seconds}s`;
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
+      {/* SIDEBAR */}
       <aside
         className={`${
           sidebarOpen ? "w-64" : "w-0"
@@ -101,33 +160,39 @@ export default function OrdersPage() {
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* MAIN */}
       <div className="flex-1 flex flex-col">
+        {/* HEADER */}
         {/* Top Header */}
         <header className="bg-gradient-to-r from-amber-800 to-amber-900 text-white shadow-md p-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 hover:bg-amber-700 rounded-lg transition"
-            >
-              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            <button onClick={() => setSidebarOpen(!sidebarOpen)}>
+              {sidebarOpen ? <X /> : <Menu />}
             </button>
-            <div>
-              <h2 className="text-3xl font-bold">Pesanan Real-time</h2>
-              <p className="text-sm text-amber-200 mt-1">
-                Monitor pesanan yang sedang berlangsung per meja
-              </p>
+            <h2 className="text-3xl font-bold">Dashboard Monitoring</h2>
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
+              🔔 Notifikasi (3)
+            </button>
+            <div className="flex items-center gap-2 bg-amber-500 bg-opacity-20 px-4 py-2 rounded-lg">
+              <User size={20} />
+              <div>
+                <p className="text-sm font-semibold">Admin User</p>
+                <p className="text-xs text-amber-200">Owner</p>
+              </div>
             </div>
           </div>
         </header>
 
+        {/* CONTENT */}
         {/* Main Content Area */}
         <main className="flex-1 overflow-auto p-8">
           <div className="mb-8 grid grid-cols-1 gap-3 md:grid-cols-3">
             <div className="rounded-3xl border border-orange-100 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.32em] text-gray-400">
+                  <p className="text-[10px] uppercase tracking-[0.32em] text-black-400">
                     Total Pesanan
                   </p>
                   <p className="mt-2 text-2xl font-bold text-amber-950">
@@ -142,7 +207,7 @@ export default function OrdersPage() {
             <div className="rounded-3xl border border-orange-100 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.32em] text-gray-400">
+                  <p className="text-[10px] uppercase tracking-[0.32em] text-black-400">
                     Dalam Proses
                   </p>
                   <p className="mt-2 text-2xl font-bold text-orange-600">
@@ -157,7 +222,7 @@ export default function OrdersPage() {
             <div className="rounded-3xl border border-orange-100 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.32em] text-gray-400">
+                  <p className="text-[10px] uppercase tracking-[0.32em] text-black-400">
                     Selesai / Batal
                   </p>
                   <p className="mt-2 text-2xl font-bold text-amber-950">
@@ -214,81 +279,82 @@ export default function OrdersPage() {
             </span>
           </div>
 
-          {/* Orders Grid */}
+          {/* GRID ORDERS */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredOrders.map((order) => (
               <div
                 key={order.id}
-                className="bg-white rounded-xl shadow-md hover:shadow-lg transition overflow-hidden border border-gray-100"
+                className="bg-white rounded-xl shadow border overflow-hidden"
               >
-                {/* Card Header */}
-                <div className="bg-orange-50 border-b border-orange-100 p-4 flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="bg-orange-500 text-white font-bold px-3 py-1 rounded-lg text-sm">
+                {/* HEADER CARD */}
+                <div className="bg-orange-50 p-4 border-b">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="bg-orange-500 text-white px-3 py-1 rounded text-sm">
                         {order.id}
                       </span>
+                      <h3 className="font-bold mt-2">{order.table}</h3>
+
+                      {/* 🕒 WAKTU */}
+                      <div className="text-xs text-gray-600 mt-1 space-y-1">
+                        <p>Masuk: {formatTime(order.createdAt)}</p>
+
+                        {order.status === "proses" && (
+                          <p className="text-orange-600 font-medium">
+                            Durasi: {getDuration(order.startedAt)}
+                          </p>
+                        )}
+
+                        {order.status === "selesai" && (
+                          <p className="text-green-600 font-medium">
+                            Selesai: {formatTime(order.completedAt)}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <h3 className="text-lg font-bold text-amber-950">
-                      {order.table}
-                    </h3>
-                    <p className="text-xs text-gray-600">{order.time}</p>
+
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(
+                        order.status,
+                      )}`}
+                    >
+                      {getStatusLabel(order.status)}
+                    </span>
                   </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(
-                      order.status,
-                    )}`}
-                  >
-                    {getStatusLabel(order.status)}
-                  </span>
                 </div>
 
-                {/* Card Body */}
-                <div className="p-4">
-                  {/* Items List */}
-                  <div className="space-y-2 mb-4 pb-4 border-b border-gray-100">
-                    {order.items.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between text-sm"
-                      >
-                        <div>
-                          <p className="font-medium text-amber-950">
-                            {item.qty}x {item.name}
-                          </p>
-                        </div>
-                        <p className="text-orange-600 font-semibold">
-                          Rp {item.price.toLocaleString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+                {/* BODY */}
+                <div className="p-4 space-y-2">
+                  {order.items.map((item, i) => (
+                    <div key={i} className="flex justify-between text-sm">
+                      <span>
+                        {item.qty}x {item.name}
+                      </span>
+                      <span className="text-orange-600 font-semibold">
+                        Rp {item.price.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
 
-                  {/* Total */}
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-gray-700 font-medium">Total</p>
-                    <p className="text-2xl font-bold text-orange-600">
+                  <div className="pt-3 border-t flex justify-between font-bold">
+                    <span>Total</span>
+                    <span className="text-orange-600">
                       Rp {order.total.toLocaleString()}
-                    </p>
+                    </span>
                   </div>
 
-                  {/* Waiter Info */}
-                  <div className="border-t border-gray-100 pt-4">
-                    <p className="text-xs text-gray-600">
-                      Waitres:{" "}
-                      <span className="font-semibold">{order.waiter}</span>
-                    </p>
-                  </div>
+                  <p className="text-xs text-gray-500 pt-2">
+                    Waiter: {order.waiter}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
 
+          {/* EMPTY */}
           {filteredOrders.length === 0 && (
-            <div className="flex items-center justify-center h-64">
-              <p className="text-gray-400 text-lg">
-                Tidak ada pesanan dengan status ini
-              </p>
+            <div className="text-center text-gray-400 mt-20">
+              Tidak ada pesanan
             </div>
           )}
         </main>
