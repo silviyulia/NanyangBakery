@@ -107,11 +107,10 @@ export default function OwnerDashboard() {
           <p className="text-gray-600 mb-8">Real-time overview sistem bakery</p>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
             {[
               { label: "Menu Total", value: "42" },
               { label: "Karyawan Aktif", value: "8" },
-              { label: "Rating", value: "4.8/5" },
               { label: "Jam Operasional", value: "07:00 - 22:00" },
             ].map((stat, idx) => (
               <div

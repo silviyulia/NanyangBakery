@@ -1,4 +1,4 @@
-import { MenuItem } from "@/components/MenuCard";
+import { MenuItem } from "@/app/waitres/MenuCard";
 
 export type CartItem = MenuItem & {
   qty: number;

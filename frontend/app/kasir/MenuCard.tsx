@@ -6,7 +6,6 @@ export type MenuItem = {
   price: number;
   image: string;
   category: string;
-  description: string;
 };
 
 type MenuCardProps = {
@@ -34,12 +33,12 @@ export default function MenuCard({ item, addToCart, disabled }: MenuCardProps) {
             Rp {item.price.toLocaleString()}
           </span>
         </div>
-        <h2 className="mt-2 text-sm font-semibold text-amber-950">
+       {/* <h2 className="mt-2 text-sm font-semibold text-amber-950">
           {item.name}
         </h2>
         <p className="mt-1 text-xs leading-4 text-orange-700">
           {item.description}
-        </p>
+        </p> */}
         <button
           type="button"
           onClick={() => addToCart(item)}

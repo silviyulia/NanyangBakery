@@ -1,73 +1,74 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import MenuCard, { MenuItem } from "@/components/MenuCard";
-import Cart, { CartItem } from "@/components/Cart";
+import MenuCard, { MenuItem } from "@/app/waitres/MenuCard";
+import Cart, { CartItem } from "@/app/waitres/Cart";
+import Link from "next/link";
 
 const menu: MenuItem[] = [
   {
     id: 1,
-    name: "Roti Keju",
-    price: 12000,
-    image: "/nasi.jpg",
+    name: "Croissant",
     category: "Roti & Pastry",
-    description: "Roti isi keju lezat dengan lapisan kerak renyah.",
+    price: 30000,
+    image:
+      "https://static01.nyt.com/images/2021/04/07/dining/06croissantsrex1/merlin_184841898_ccc8fb62-ee41-44e8-9ddf-b95b198b88db-jumbo.jpg",
   },
   {
     id: 2,
-    name: "Croffle Cokelat",
-    price: 18000,
-    image: "/mie.jpg",
+    name: "Chocolate Cake",
     category: "Kue & Cake",
-    description: "Croffle gurih dengan saus cokelat premium.",
+    price: 45000,
+    image:
+      "https://lilluna.com/wp-content/uploads/2019/01/Chocolate-Cake103.jpg",
   },
   {
     id: 3,
-    name: "Donat Strawberry",
-    price: 15000,
-    image: "/esteh.jpg",
-    category: "Kue & Cake",
-    description: "Donat empuk dengan topping strawberry manis.",
+    name: "Espresso",
+    category: "Minuman",
+    price: 20000,
+    image:
+      "https://img.magnific.com/premium-photo/high-resolution-image-freshly-brewed-cup-espresso-with-creamy-crema-layer_1264082-26795.jpg?w=996",
   },
   {
     id: 4,
-    name: "Pain Raisin",
-    price: 14000,
-    image: "/sate.jpg",
+    name: "Baguette",
     category: "Roti & Pastry",
-    description: "Roti rendang kismis lembut dengan rasa hangat.",
+    price: 28000,
+    image:
+      "https://latelierdespains.fr/wp-content/uploads/2023/11/baguette-courte_Atelier-des-pains_1.jpg    ",
   },
   {
     id: 5,
-    name: "Kue Tart Cokelat",
-    price: 25000,
-    image: "/soup.jpg",
+    name: "Red Velvet",
     category: "Kue & Cake",
-    description: "Slice kue tart cokelat premium untuk pelanggan istimewa.",
+    price: 40000,
+    image:
+      "https://www.mommyplates.com/wp-content/uploads/2025/05/Red-Velvet-Cake.webp",
   },
   {
     id: 6,
-    name: "Es Kopi Latte",
-    price: 18000,
-    image: "/mango.jpg",
+    name: "Cappuccino",
     category: "Minuman",
-    description: "Kopi latte dingin, creamy, dengan aroma kacang pilihan.",
+    price: 25000,
+    image:
+      "https://tse4.mm.bing.net/th/id/OIP.sORUCLQs6IFavbrcEWRPgAHaE8?pid=Api&P=0&h=180",
   },
   {
     id: 7,
-    name: "Lemon Tea",
-    price: 10000,
-    image: "/mie.jpg",
-    category: "Minuman",
-    description: "Teh lemon segar yang pas untuk menemani roti panas.",
+    name: "Danish Pastry",
+    category: "Roti & Pastry",
+    price: 32000,
+    image:
+      "https://tse1.mm.bing.net/th/id/OIP.tPkgAvgXjtG-R1fQNlm8ywHaEK?pid=Api&P=0&h=180",
   },
   {
     id: 8,
-    name: "Milkshake Vanilla",
-    price: 20000,
-    image: "/esteh.jpg",
-    category: "Minuman",
-    description: "Milkshake vanilla lembut dengan topping krim kocok.",
+    name: "Brownies",
+    category: "Kue & Cake",
+    price: 35000,
+    image:
+      "https://www.glorioustreats.com/wp-content/uploads/2022/09/cheesecake-brownie-recipe-square.jpeg",
   },
 ];
 
@@ -83,6 +84,17 @@ export default function WaitresPage() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [tableNumber, setTableNumber] = useState<number | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const selectedTableName = tableNumber
     ? `Meja ${tableNumber}`
@@ -158,17 +170,45 @@ export default function WaitresPage() {
               </h1>
             </div>
             <div className="flex items-center gap-4">
-              <div className="hidden flex-col items-end sm:flex">
-                <p className="text-sm font-semibold">{actorName}</p>
-                <p className="text-xs text-orange-200">{actorRole}</p>
-              </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-600 text-white font-semibold">
+          <div className="flex items-center gap-4">
+            <button className="text-sm text-amber-100 hover:text-white transition">
+              👤 waitres
+            </button>
+            <Link
+              href="/login"
+              className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition"
+            >
+              Logout
+            </Link>
+          </div>
+              {/*<div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-600 text-white font-semibold">
                 {actorName.charAt(0)}
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
       </nav>
+
+      {isMobile && !tableNumber && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-6">
+          <h2 className="text-2xl font-bold mb-4">Pilih Meja</h2>
+          <p className="text-gray-500 mb-6 text-center">
+            Pilih meja terlebih dahulu sebelum melakukan order
+          </p>
+
+          <div className="grid grid-cols-4 gap-3">
+            {Array.from({ length: 20 }, (_, i) => i + 1).map((table) => (
+              <button
+                key={table}
+                onClick={() => setTableNumber(table)}
+                className="border rounded-lg py-3 text-sm font-medium hover:bg-orange-100"
+              >
+                {table}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <main className="min-h-screen bg-amber-50">
         <div className="mx-auto max-w-[1480px] px-4 py-8">
@@ -238,10 +278,10 @@ export default function WaitresPage() {
                         disabled={occupied}
                         className={`rounded-lg py-2 text-xs font-semibold transition ${
                           occupied
-                            ? "cursor-not-allowed border border-orange-300 bg-orange-100 text-amber-900"
+                            ? "bg-red-100 text-red-600 border border-red-300 cursor-not-allowed"
                             : selected
-                              ? "border border-orange-600 bg-orange-500 text-white"
-                              : "border border-orange-200 bg-orange-50 text-amber-900 hover:bg-orange-100"
+                              ? "bg-orange-500 text-white border border-orange-600"
+                              : "bg-white border border-gray-300 hover:bg-orange-100"
                         }`}
                       >
                         {table}

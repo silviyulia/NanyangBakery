@@ -149,8 +149,6 @@ const transactionData: Transaction[] = [
 
   return (
     <div className="flex h-screen bg-gray-50">
-
-     
       {/* SIDEBAR */}
       <aside
         className={`${
@@ -201,7 +199,7 @@ const transactionData: Transaction[] = [
       <div className="flex-1 flex flex-col">
 
         {/* HEADER */}
- <header className="bg-gradient-to-r from-amber-800 to-amber-900 text-white shadow-md p-6 flex items-center justify-between">
+        <header className="bg-gradient-to-r from-amber-800 to-amber-900 text-white shadow-md p-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button onClick={() => setSidebarOpen(!sidebarOpen)}>
               {sidebarOpen ? <X /> : <Menu />}
@@ -223,7 +221,7 @@ const transactionData: Transaction[] = [
         </header>
 
         {/* CONTENT */}
-        <main className="p-8 space-y-6">
+        <main className="flex-1 overflow-auto p-8">
 
      {/* FILTER LAPORAN */}
 <div className="mb-8 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">

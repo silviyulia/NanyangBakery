@@ -174,35 +174,49 @@ export default function Home() {
       </nav>
 
       {/* ================= HERO SECTION ================= */}
-      <section className="bg-gradient-to-r from-amber-800 to-amber-700 text-white py-32 text-center overflow-hidden">
-        <div className="max-w-screen-xl mx-auto px-4">
-          <h2 className="text-6xl font-bold mb-6 animate-fade-in-up">
-            Selamat Datang! 🍹
-          </h2>
-          <p className="text-2xl text-amber-100 mb-8 animate-fade-in-up stagger-1">
-            Nanyang Bakery & Beverage Shop - Minuman Segar & Bakery Lezat
-          </p>
-          <p className="text-lg text-amber-50 mb-12 max-w-2xl mx-auto animate-fade-in-up stagger-2">
-            Kami menyediakan minuman berkualitas premium dan bakery yang dibuat
-            dengan cinta. Pesan sekarang melalui berbagai platform pengantaran
-            atau hubungi kami secara langsung.
-          </p>
-          <div className="flex gap-4 justify-center flex-wrap">
-            <Link
-              href="#contact"
-              className="bg-white text-amber-800 px-6 py-2 rounded-lg font-bold hover:bg-amber-100 transition transform hover:scale-110 animate-fade-in-up stagger-2 inline-block"
-            >
-              Kontak
-            </Link>
-            <Link
-              href="/login"
-              className="border-2 border-white text-white px-8 py-4 rounded-lg font-bold hover:bg-white/10 transition transform hover:scale-110 animate-fade-in-up stagger-3 inline-block"
-            >
-              Masuk ke Akun
-            </Link>
-          </div>
-        </div>
-      </section>
+     <section
+  className="py-32 text-center text-white relative overflow-hidden"
+  style={{
+    backgroundImage: "url('https://getwallpapers.com/wallpaper/full/a/c/f/818880-bakery-wallpapers-1920x1080-download-free.jpg')",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+  }}
+>
+  {/* overlay biar teks kebaca */}
+  <div className="absolute inset-0 bg-black/50"></div>
+
+  <div className="relative max-w-screen-xl mx-auto px-4">
+    <h2 className="text-6xl font-bold mb-6 animate-fade-in-up">
+      Selamat Datang! 🍹
+    </h2>
+
+    <p className="text-2xl text-amber-100 mb-8 animate-fade-in-up stagger-1">
+      Nanyang Bakery & Beverage Shop - Minuman Segar & Bakery Lezat
+    </p>
+
+    <p className="text-lg text-amber-50 mb-12 max-w-2xl mx-auto animate-fade-in-up stagger-2">
+      Kami menyediakan minuman berkualitas premium dan bakery yang dibuat
+      dengan cinta. Pesan sekarang melalui berbagai platform pengantaran
+      atau hubungi kami secara langsung.
+    </p>
+
+    <div className="flex gap-4 justify-center flex-wrap">
+      <Link
+        href="#contact"
+        className="bg-white text-amber-800 px-6 py-2 rounded-lg font-bold hover:bg-amber-100 transition transform hover:scale-110 animate-fade-in-up stagger-2 inline-block"
+      >
+        Kontak
+      </Link>
+
+      <Link
+        href="/login"
+        className="border-2 border-white text-white px-8 py-4 rounded-lg font-bold hover:bg-white/10 transition transform hover:scale-110 animate-fade-in-up stagger-3 inline-block"
+      >
+        Masuk ke Akun
+      </Link>
+    </div>
+  </div>
+</section>
 
       {/* ================= KONTAK SECTION ================= */}
       <section
@@ -226,10 +240,10 @@ export default function Home() {
                 </a>
               </p>
               <p className="font-semibold text-amber-900 animate-fade-in-up stagger-2 hover:scale-105 transition">
-                📍 Tg.Sengkuang atas No.26 Batu ampar, Kota Batam
+                📍 Komplek Pertokoan, Jalan cahaya Garden Blok A4 No.7 Bengkong,kota batam
               </p>
               <p className="font-semibold text-amber-900 animate-fade-in-up stagger-3 hover:scale-105 transition">
-                🕒 10:00 - 22:00
+                🕒 07.00 - 20.00
               </p>
               <p className="font-semibold text-amber-900 animate-fade-in-up stagger-3 hover:scale-105 transition">
                 📧 nanyangbakery@gmail.com

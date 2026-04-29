@@ -2,18 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import MenuCard, { MenuItem } from "@/app/waitres/MenuCard";
 
 export default function KasirPage() {
-  const [openMenu, setOpenMenu] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [incomingTable, setIncomingTable] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
   const [cart, setCart] = useState<
     Array<{
       id: number;
       name: string;
       price: number;
       qty: number;
-      emoji?: string;
+      image?: string;
     }>
   >([]);
 
@@ -27,96 +29,98 @@ export default function KasirPage() {
       const parsed = JSON.parse(storedOrder);
       if (parsed?.items) {
         setIncomingTable(parsed.tableNumber || null);
-        setCart(
-          parsed.items.map((item: any) => ({
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            qty: item.qty,
-            emoji: item.emoji || "🍽️",
-          })),
-        );
+        setCart(parsed.items);
       }
     } catch (error) {
       console.error("Gagal memuat pesanan waitres:", error);
     }
   }, []);
 
-  const menuItems = [
+  // ================= MENU DATA =================
+  const menu: MenuItem[] = [
     {
       id: 1,
-      name: "Strawberry Blend",
-      price: 18000,
-      emoji: "🍓",
-      category: "blend",
+      name: "Croissant",
+      category: "Roti & Pastry",
+      price: 30000,
+      image:
+        "https://static01.nyt.com/images/2021/04/07/dining/06croissantsrex1/merlin_184841898_ccc8fb62-ee41-44e8-9ddf-b95b198b88db-jumbo.jpg",
     },
-    { id: 2, name: "Taro Latte", price: 22000, emoji: "💜", category: "latte" },
+    {
+      id: 2,
+      name: "Chocolate Cake",
+      category: "Kue & Cake",
+      price: 45000,
+      image:
+        "https://lilluna.com/wp-content/uploads/2019/01/Chocolate-Cake103.jpg",
+    },
     {
       id: 3,
-      name: "Matcha Green",
-      price: 24000,
-      emoji: "🍵",
-      category: "latte",
+      name: "Espresso",
+      category: "Minuman",
+      price: 20000,
+      image:
+        "https://img.magnific.com/premium-photo/high-resolution-image-freshly-brewed-cup-espresso-with-creamy-crema-layer_1264082-26795.jpg?w=996",
     },
     {
       id: 4,
-      name: "Chocolate Shake",
-      price: 20000,
-      emoji: "🍫",
-      category: "shake",
+      name: "Baguette",
+      category: "Roti & Pastry",
+      price: 28000,
+      image:
+        "https://latelierdespains.fr/wp-content/uploads/2023/11/baguette-courte_Atelier-des-pains_1.jpg",
     },
     {
       id: 5,
-      name: "Vanilla Cream",
-      price: 19000,
-      emoji: "🤍",
-      category: "shake",
+      name: "Red Velvet",
+      category: "Kue & Cake",
+      price: 40000,
+      image:
+        "https://www.mommyplates.com/wp-content/uploads/2025/05/Red-Velvet-Cake.webp",
     },
     {
       id: 6,
-      name: "Mango Paradise",
-      price: 21000,
-      emoji: "🥭",
-      category: "blend",
+      name: "Cappuccino",
+      category: "Minuman",
+      price: 25000,
+      image:
+        "https://tse4.mm.bing.net/th/id/OIP.sORUCLQs6IFavbrcEWRPgAHaE8?pid=Api&P=0&h=180",
     },
     {
       id: 7,
-      name: "Iced Coffee",
-      price: 16000,
-      emoji: "☕",
-      category: "coffee",
+      name: "Danish Pastry",
+      category: "Roti & Pastry",
+      price: 32000,
+      image:
+        "https://tse1.mm.bing.net/th/id/OIP.tPkgAvgXjtG-R1fQNlm8ywHaEK?pid=Api&P=0&h=180",
     },
     {
       id: 8,
-      name: "Blueberry Mix",
-      price: 20000,
-      emoji: "🫐",
-      category: "blend",
-    },
-    {
-      id: 9,
-      name: "Oreo Dreams",
-      price: 23000,
-      emoji: "🍪",
-      category: "shake",
-    },
-    {
-      id: 10,
-      name: "Avocado Smoothie",
-      price: 25000,
-      emoji: "🥑",
-      category: "smoothie",
+      name: "Brownies",
+      category: "Kue & Cake",
+      price: 35000,
+      image:
+        "https://www.glorioustreats.com/wp-content/uploads/2022/09/cheesecake-brownie-recipe-square.jpeg",
     },
   ];
 
-  const filteredItems =
-    selectedCategory === "all"
-      ? menuItems
-      : menuItems.filter((item) => item.category === selectedCategory);
+  const categories = ["Semua", "Roti & Pastry", "Kue & Cake", "Minuman"];
 
-  const addToCart = (item: (typeof menuItems)[0]) => {
-    const existingItem = cart.find((c) => c.id === item.id);
-    if (existingItem) {
+  // ================= FILTER =================
+  const filteredMenu = menu.filter((item) => {
+    const matchCategory =
+      selectedCategory === "Semua" || item.category === selectedCategory;
+
+    const matchSearch = item.name.toLowerCase().includes(search.toLowerCase());
+
+    return matchCategory && matchSearch;
+  });
+
+  // ================= CART =================
+  const addToCart = (item: MenuItem) => {
+    const existing = cart.find((c) => c.id === item.id);
+
+    if (existing) {
       setCart(
         cart.map((c) => (c.id === item.id ? { ...c, qty: c.qty + 1 } : c)),
       );
@@ -145,16 +149,24 @@ export default function KasirPage() {
   };
 
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+
   const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
 
+  // ================= UI =================
   return (
     <>
-      {/* ================= NAVBAR ================= */}
-      <nav className="sticky top-0 z-50 bg-amber-800 text-white shadow-lg">
-        <div className="max-w-screen-2xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">🥐 Kasir - Nanyang Bakery</h1>
-
-          {/* Logout Button */}
+      {/* NAVBAR */}
+            {/* Top Navbar */}
+      <nav className="bg-amber-800 text-white shadow-lg">
+        <div className="mx-auto max-w-[1480px] px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="text-2xl font-bold">🍞</div>
+              <h1 className="text-lg font-semibold">
+                Waitres - Nanyang Bakery
+              </h1>
+            </div>
+            <div className="flex items-center gap-4">
           <div className="flex items-center gap-4">
             <button className="text-sm text-amber-100 hover:text-white transition">
               👤 Kasir
@@ -166,118 +178,66 @@ export default function KasirPage() {
               Logout
             </Link>
           </div>
+              {/*<div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-600 text-white font-semibold">
+                {actorName.charAt(0)}
+              </div> */}
+            </div>
+          </div>
         </div>
       </nav>
 
-      {incomingTable ? (
-        <div className="mx-auto max-w-screen-2xl px-4 py-4">
-          <div className="rounded-3xl border border-amber-200 bg-amber-100 p-4 text-amber-900 shadow-sm">
-            Pesanan baru dari waitres: Meja{" "}
-            <span className="font-semibold">{incomingTable}</span>
+      {/* INFO ORDER */}
+      {incomingTable && (
+        <div className="max-w-screen-2xl mx-auto px-4 py-4">
+          <div className="bg-amber-100 border border-amber-300 p-4 rounded-xl">
+            Pesanan dari Meja <span className="font-bold">{incomingTable}</span>
           </div>
         </div>
-      ) : null}
+      )}
 
-      {/* ================= MAIN CONTENT ================= */}
       <div className="bg-amber-50 min-h-screen py-8">
-        <div className="max-w-screen-2xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* LEFT SIDE - MENU */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-3xl font-bold text-amber-900 mb-6">
-                Menu Minuman
-              </h2>
+        <div className="max-w-screen-2xl mx-auto px-4 grid lg:grid-cols-3 gap-6">
+          {/* LEFT - MENU */}
+          <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow">
+            <h2 className="text-2xl font-bold mb-4">Menu</h2>
 
-              {/* Category Filter */}
-              <div className="flex flex-wrap gap-2 mb-8">
+            {/* CATEGORY */}
+            <div className="flex gap-2 flex-wrap mb-4">
+              {categories.map((cat) => (
                 <button
-                  onClick={() => setSelectedCategory("all")}
-                  className={`px-4 py-2 rounded-lg font-semibold transition ${
-                    selectedCategory === "all"
-                      ? "bg-gradient-to-r from-amber-700 to-amber-600 text-white"
-                      : "bg-amber-100 text-amber-900 hover:bg-amber-200"
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-3 py-1 rounded-full text-sm ${
+                    selectedCategory === cat
+                      ? "bg-orange-600 text-white"
+                      : "bg-orange-100"
                   }`}
                 >
-                  Semua
+                  {cat}
                 </button>
-                <button
-                  onClick={() => setSelectedCategory("blend")}
-                  className={`px-4 py-2 rounded-lg font-semibold transition ${
-                    selectedCategory === "blend"
-                      ? "bg-gradient-to-r from-amber-700 to-amber-600 text-white"
-                      : "bg-amber-100 text-amber-900 hover:bg-amber-200"
-                  }`}
-                >
-                  Ice Blend
-                </button>
-                <button
-                  onClick={() => setSelectedCategory("latte")}
-                  className={`px-4 py-2 rounded-lg font-semibold transition ${
-                    selectedCategory === "latte"
-                      ? "bg-gradient-to-r from-amber-700 to-amber-600 text-white"
-                      : "bg-amber-100 text-amber-900 hover:bg-amber-200"
-                  }`}
-                >
-                  With Milk
-                </button>
-                <button
-                  onClick={() => setSelectedCategory("shake")}
-                  className={`px-4 py-2 rounded-lg font-semibold transition ${
-                    selectedCategory === "shake"
-                      ? "bg-gradient-to-r from-amber-700 to-amber-600 text-white"
-                      : "bg-amber-100 text-amber-900 hover:bg-amber-200"
-                  }`}
-                >
-                  Shake
-                </button>
-                <button
-                  onClick={() => setSelectedCategory("coffee")}
-                  className={`px-4 py-2 rounded-lg font-semibold transition ${
-                    selectedCategory === "coffee"
-                      ? "bg-gradient-to-r from-amber-700 to-amber-600 text-white"
-                      : "bg-amber-100 text-amber-900 hover:bg-amber-200"
-                  }`}
-                >
-                  Coffee
-                </button>
-                <button
-                  onClick={() => setSelectedCategory("smoothie")}
-                  className={`px-4 py-2 rounded-lg font-semibold transition ${
-                    selectedCategory === "smoothie"
-                      ? "bg-gradient-to-r from-amber-700 to-amber-600 text-white"
-                      : "bg-amber-100 text-amber-900 hover:bg-amber-200"
-                  }`}
-                >
-                  Smoothie
-                </button>
-              </div>
+              ))}
+            </div>
 
-              {/* Menu Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 text-center hover:shadow-lg hover:scale-105 transition cursor-pointer"
-                  >
-                    <p className="text-5xl mb-3">{item.emoji}</p>
-                    <h3 className="font-bold text-amber-900 text-sm">
-                      {item.name}
-                    </h3>
-                    <p className="text-amber-700 font-semibold mt-2">
-                      Rp {item.price.toLocaleString("id-ID")}
-                    </p>
-                    <button
-                      onClick={() => addToCart(item)}
-                      className="mt-3 w-full bg-gradient-to-r from-amber-700 to-amber-600 text-white py-2 rounded-lg font-bold hover:from-amber-800 hover:to-amber-700 transition"
-                    >
-                      + Tambah
-                    </button>
-                  </div>
-                ))}
-              </div>
+            {/* SEARCH */}
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari menu..."
+              className="w-full border px-4 py-2 rounded-full mb-4"
+            />
+
+            {/* MENU GRID */}
+            <div className="grid sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {filteredMenu.map((item) => (
+                <MenuCard
+                  key={item.id}
+                  item={item}
+                  addToCart={addToCart}
+                  disabled={false}
+                />
+              ))}
             </div>
           </div>
-
           {/* RIGHT SIDE - CART */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-24">
@@ -299,9 +259,6 @@ export default function KasirPage() {
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <p className="font-bold text-amber-900">
-                            {item.emoji} {item.name}
-                          </p>
                           <p className="text-sm text-amber-700">
                             Rp {item.price.toLocaleString("id-ID")}
                           </p>
