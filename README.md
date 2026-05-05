@@ -1,5 +1,5 @@
 **SYSTEM MANAGEMENT OPERATIONAL BAKERY & BEVERAGE SHOP WITH MONITORING DASHBOARD**
 
-*Nama Anggota : 
+*Nama Anggota : *
 * Silvi yulia rahmawati : 3312411035
 * Riska safitri : 3312411056 
