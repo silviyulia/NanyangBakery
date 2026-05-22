@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import MenuCard, { MenuItem } from "@/app/waitres/MenuCard";
 import Sidebar from "../components/Sidebar";
 
@@ -11,6 +12,9 @@ export default function transaksiPage() {
 
   const [incomingTable, setIncomingTable] =
     useState<string | null>(null);
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [search, setSearch] = useState("");
 
@@ -44,6 +48,17 @@ export default function transaksiPage() {
         "Gagal memuat pesanan waitres:",
         error
       );
+    }
+
+    // also check for incoming table from query param
+    try {
+      const tableFromQuery = searchParams?.get("table");
+
+      if (tableFromQuery) {
+        setIncomingTable(decodeURIComponent(tableFromQuery));
+      }
+    } catch (e) {
+      // ignore
     }
   }, []);
 
@@ -181,6 +196,29 @@ export default function transaksiPage() {
         "waitresOrder"
       );
     }
+  };
+
+  const handleSaveOrder = () => {
+    if (!incomingTable) {
+      if (typeof window !== "undefined") {
+        window.alert("Meja tidak ditemukan.");
+      }
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        "savedOrder",
+        JSON.stringify({
+          table: incomingTable,
+          items: cart,
+          total: totalPrice,
+        }),
+      );
+      window.alert("Pesanan telah disimpan");
+    }
+
+    router.push("/kasir");
   };
 
   const totalPrice = cart.reduce(
@@ -419,6 +457,18 @@ export default function transaksiPage() {
 
                   {/* BUTTON */}
                   <div className="space-y-3 pt-4">
+                    <button
+                      onClick={handleSaveOrder}
+                      disabled={cart.length === 0}
+                      className={`w-full py-3 rounded-2xl font-bold text-white transition ${
+                        cart.length === 0
+                          ? "bg-gray-300 cursor-not-allowed"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      }`}
+                    >
+                      💾 Simpan Pesanan
+                    </button>
+
                     <button
                       disabled={cart.length === 0}
                       className={`w-full py-3 rounded-2xl font-bold text-white transition ${

@@ -1,6 +1,7 @@
 "use client";
 
 import Sidebar from "./components/Sidebar";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type Order = {
@@ -31,7 +32,7 @@ export default function KasirDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const orders: Order[] = [
+  const initialOrders: Order[] = [
     {
       id: "M1",
       meja: "Meja 1",
@@ -111,6 +112,53 @@ export default function KasirDashboard() {
       ],
     },
   ];
+
+  const [orders, setOrders] = useState<Order[]>(initialOrders);
+
+  const getOrderTotal = (
+    items: {
+      name: string;
+      qty: number;
+      price: number;
+    }[],
+  ) =>
+    items.reduce(
+      (sum, item) => sum + item.price * item.qty,
+      0,
+    );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const savedOrder = window.localStorage.getItem(
+      "savedOrder",
+    );
+    if (!savedOrder) return;
+
+    try {
+      const parsed = JSON.parse(savedOrder);
+      if (!parsed?.table || !Array.isArray(parsed.items)) return;
+
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order.meja === parsed.table
+            ? {
+                ...order,
+                status: "proses",
+                items: parsed.items,
+                total:
+                  typeof parsed.total === "number"
+                    ? parsed.total
+                    : getOrderTotal(parsed.items),
+                selesai: undefined,
+              }
+            : order,
+        ),
+      );
+    } catch (error) {
+      console.error("Gagal memuat pesanan tersimpan:", error);
+    }
+  }, []);
 
   const filteredOrders = orders.filter(
     (order) =>
@@ -222,7 +270,12 @@ export default function KasirDashboard() {
             {filteredOrders.map((order) => (
               <div
                 key={order.id}
-                className="bg-white rounded-2xl border border-gray-300 overflow-hidden shadow-sm"
+                aria-disabled={order.status !== "proses"}
+                className={`bg-white rounded-2xl border border-gray-300 overflow-hidden shadow-sm transition-all duration-300 ease-in-out ${
+                  order.status !== "proses"
+                    ? "opacity-80 pointer-events-none"
+                    : ""
+                }`}
               >
                 {/* HEADER CARD */}
                 <div className="bg-[#f2dfbf] p-4 border-b">
@@ -295,6 +348,18 @@ export default function KasirDashboard() {
                     <p className="text-sm text-gray-500 mt-4">
                       Waiter: {order.waiter}
                     </p>
+                    {order.status === "proses" && (
+                      <div className="mt-4">
+                        <Link
+                          href={`/kasir/transaksi?table=${encodeURIComponent(
+                            order.meja,
+                          )}`}
+                          className="w-full inline-block text-center py-3 bg-orange-500 text-white rounded-2xl font-semibold hover:bg-orange-600"
+                        >
+                          Lihat Transaksi
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
