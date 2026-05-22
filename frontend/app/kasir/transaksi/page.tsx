@@ -6,8 +6,12 @@ import MenuCard, { MenuItem } from "@/app/waitres/MenuCard";
 import Sidebar from "../components/Sidebar";
 
 export default function transaksiPage() {
-  const [selectedCategory, setSelectedCategory] = useState("Semua");
-  const [incomingTable, setIncomingTable] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] =
+    useState("Semua");
+
+  const [incomingTable, setIncomingTable] =
+    useState<string | null>(null);
+
   const [search, setSearch] = useState("");
 
   const [cart, setCart] = useState<
@@ -20,12 +24,12 @@ export default function transaksiPage() {
     }>
   >([]);
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const storedOrder = window.localStorage.getItem("waitresOrder");
+    const storedOrder =
+      window.localStorage.getItem("waitresOrder");
+
     if (!storedOrder) return;
 
     try {
@@ -36,7 +40,10 @@ export default function transaksiPage() {
         setCart(parsed.items);
       }
     } catch (error) {
-      console.error("Gagal memuat pesanan waitres:", error);
+      console.error(
+        "Gagal memuat pesanan waitres:",
+        error
+      );
     }
   }, []);
 
@@ -108,7 +115,12 @@ export default function transaksiPage() {
     },
   ];
 
-  const categories = ["Semua", "Roti & Pastry", "Kue & Cake", "Minuman"];
+  const categories = [
+    "Semua",
+    "Roti & Pastry",
+    "Kue & Cake",
+    "Minuman",
+  ];
 
   // ================= FILTER =================
   const filteredMenu = menu.filter((item) => {
@@ -125,12 +137,16 @@ export default function transaksiPage() {
 
   // ================= CART =================
   const addToCart = (item: MenuItem) => {
-    const existing = cart.find((c) => c.id === item.id);
+    const existing = cart.find(
+      (c) => c.id === item.id
+    );
 
     if (existing) {
       setCart(
         cart.map((c) =>
-          c.id === item.id ? { ...c, qty: c.qty + 1 } : c
+          c.id === item.id
+            ? { ...c, qty: c.qty + 1 }
+            : c
         )
       );
     } else {
@@ -142,7 +158,10 @@ export default function transaksiPage() {
     setCart(cart.filter((c) => c.id !== id));
   };
 
-  const updateQty = (id: number, qty: number) => {
+  const updateQty = (
+    id: number,
+    qty: number
+  ) => {
     if (qty <= 0) {
       removeFromCart(id);
     } else {
@@ -158,12 +177,15 @@ export default function transaksiPage() {
     setCart([]);
 
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem("waitresOrder");
+      window.localStorage.removeItem(
+        "waitresOrder"
+      );
     }
   };
 
   const totalPrice = cart.reduce(
-    (sum, item) => sum + item.price * item.qty,
+    (sum, item) =>
+      sum + item.price * item.qty,
     0
   );
 
@@ -173,81 +195,41 @@ export default function transaksiPage() {
   );
 
   return (
-    <div className="min-h-screen bg-amber-50">
-      {/* ================= NAVBAR ================= */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-amber-800 text-white shadow-lg">
-        <div className="flex items-center justify-between px-4 py-4">
-          {/* LEFT */}
-          <div className="flex items-center gap-3">
-            {/* MOBILE MENU BUTTON */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden text-2xl"
-            >
-              ☰
-            </button>
+    <div className="min-h-screen bg-[#f4ece7] flex">
+      {/* SIDEBAR */}
+      <Sidebar />
 
-            <div className="text-2xl font-bold">🍞</div>
+      {/* MAIN */}
+      <main className="flex-1">
+        {/* HEADER */}
+        <header className="bg-[#b65a00] px-8 py-5 flex items-center justify-between shadow-md">
+          <h2 className="text-4xl font-bold text-white">
+            Dashboard Kasir
+          </h2>
 
-            <h1 className="text-lg font-semibold">
-              Kasir - Nanyang Bakery
-            </h1>
+          <div className="bg-white rounded-full px-5 py-2 flex items-center gap-3 shadow">
+            <div className="w-10 h-10 rounded-full border flex items-center justify-center">
+              👤
+            </div>
+
+            <div>
+              <p className="font-bold text-[#b65a00] leading-none">
+                kasir
+              </p>
+
+              <span className="text-sm text-gray-500">
+                hau
+              </span>
+            </div>
           </div>
+        </header>
 
-          {/* RIGHT */}
-          <div className="flex items-center gap-3">
-            <button className="text-sm text-amber-100 hover:text-white transition">
-              👤 Kasir
-            </button>
-
-            <Link
-              href="/login"
-              className="bg-red-600 px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition"
-            >
-              Logout
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      {/* ================= LAYOUT ================= */}
-      <div className="flex pt-20 min-h-screen bg-[#a64b00]">
-        {/* ================= SIDEBAR ================= */}
-
-        {/* MOBILE OVERLAY */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/40 z-40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* SIDEBAR */}
-<aside
-  className={`
-    fixed top-20 left-0 z-50
-    h-[calc(100vh-80px)]
-    w-64
-    bg-[#a64b00]
-    transition-transform duration-300
-    overflow-y-auto
-    lg:translate-x-0
-    ${
-      sidebarOpen
-        ? "translate-x-0"
-        : "-translate-x-full"
-    }
-  `}
->
-  <Sidebar />
-</aside>
-
-        {/* ================= MAIN CONTENT ================= */}
-        <main className="flex-1 w-full p-4 lg:p-6 lg:ml-64 bg-amber-50 min-h-screen">
+        {/* CONTENT */}
+        <section className="p-8">
           {incomingTable && (
             <div className="mb-6">
-              <div className="bg-amber-100 border border-amber-300 p-4 rounded-xl">
-                Pesanan dari Meja{" "}
+              <div className="bg-orange-100 border border-orange-300 p-4 rounded-2xl text-orange-800 font-medium">
+                Pesanan dari{" "}
                 <span className="font-bold">
                   {incomingTable}
                 </span>
@@ -257,21 +239,23 @@ export default function transaksiPage() {
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* LEFT - MENU */}
-            <div className="xl:col-span-2 bg-white p-6 rounded-2xl shadow">
-              <h2 className="text-2xl font-bold mb-4">
+            <div className="xl:col-span-2 bg-white p-6 rounded-3xl shadow-sm border border-gray-200">
+              <h2 className="text-2xl font-bold text-[#5c2500] mb-6">
                 Menu
               </h2>
 
               {/* CATEGORY */}
-              <div className="flex gap-2 flex-wrap mb-4">
+              <div className="flex gap-3 flex-wrap mb-5">
                 {categories.map((cat) => (
                   <button
                     key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-3 py-1 rounded-full text-sm transition ${
+                    onClick={() =>
+                      setSelectedCategory(cat)
+                    }
+                    className={`px-5 py-2 rounded-full font-semibold transition ${
                       selectedCategory === cat
-                        ? "bg-orange-600 text-white"
-                        : "bg-orange-100 hover:bg-orange-200"
+                        ? "bg-orange-500 text-white shadow"
+                        : "bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200"
                     }`}
                   >
                     {cat}
@@ -286,11 +270,11 @@ export default function transaksiPage() {
                   setSearch(e.target.value)
                 }
                 placeholder="Cari menu..."
-                className="w-full border px-4 py-2 rounded-full mb-4"
+                className="w-full border border-gray-200 px-5 py-3 rounded-2xl mb-6 focus:outline-none focus:ring-2 focus:ring-orange-300"
               />
 
               {/* MENU GRID */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {filteredMenu.map((item) => (
                   <MenuCard
                     key={item.id}
@@ -304,30 +288,30 @@ export default function transaksiPage() {
 
             {/* RIGHT - CART */}
             <div className="xl:col-span-1">
-              <div className="bg-white rounded-2xl shadow-lg p-6 xl:sticky xl:top-24">
-                <h2 className="text-2xl font-bold text-amber-900 mb-6">
+              <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6 sticky top-6">
+                <h2 className="text-2xl font-bold text-[#5c2500] mb-6">
                   🛒 Pesanan ({totalItems})
                 </h2>
 
                 {/* CART ITEMS */}
-                <div className="space-y-3 max-h-96 overflow-y-auto mb-6 border-b border-amber-200 pb-4">
+                <div className="space-y-3 max-h-96 overflow-y-auto mb-6 border-b border-gray-200 pb-4">
                   {cart.length === 0 ? (
-                    <p className="text-center text-amber-600 py-8">
+                    <p className="text-center text-gray-400 py-8">
                       Keranjang kosong
                     </p>
                   ) : (
                     cart.map((item) => (
                       <div
                         key={item.id}
-                        className="bg-amber-50 p-3 rounded-lg border border-amber-200"
+                        className="bg-orange-50 p-4 rounded-2xl border border-orange-100"
                       >
-                        <div className="flex justify-between items-start mb-2">
+                        <div className="flex justify-between items-start mb-3">
                           <div>
                             <h3 className="font-semibold">
                               {item.name}
                             </h3>
 
-                            <p className="text-sm text-amber-700">
+                            <p className="text-sm text-orange-700">
                               Rp{" "}
                               {item.price.toLocaleString(
                                 "id-ID"
@@ -339,7 +323,7 @@ export default function transaksiPage() {
                             onClick={() =>
                               removeFromCart(item.id)
                             }
-                            className="text-red-500 hover:text-red-700 font-bold"
+                            className="text-red-500 font-bold"
                           >
                             ✕
                           </button>
@@ -353,7 +337,7 @@ export default function transaksiPage() {
                                 item.qty - 1
                               )
                             }
-                            className="bg-amber-200 w-7 h-7 rounded font-bold"
+                            className="w-8 h-8 rounded-lg bg-orange-200 font-bold"
                           >
                             −
                           </button>
@@ -369,7 +353,7 @@ export default function transaksiPage() {
                                 ) || 0
                               )
                             }
-                            className="flex-1 text-center border rounded py-1 text-sm"
+                            className="flex-1 text-center border rounded-lg py-1"
                           />
 
                           <button
@@ -379,17 +363,19 @@ export default function transaksiPage() {
                                 item.qty + 1
                               )
                             }
-                            className="bg-amber-200 w-7 h-7 rounded font-bold"
+                            className="w-8 h-8 rounded-lg bg-orange-200 font-bold"
                           >
                             +
                           </button>
                         </div>
 
-                        <p className="text-right font-bold mt-2">
+                        <p className="text-right font-bold text-orange-600 mt-3">
                           Rp{" "}
                           {(
                             item.price * item.qty
-                          ).toLocaleString("id-ID")}
+                          ).toLocaleString(
+                            "id-ID"
+                          )}
                         </p>
                       </div>
                     ))
@@ -400,14 +386,18 @@ export default function transaksiPage() {
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
+
                     <span>
                       Rp{" "}
-                      {totalPrice.toLocaleString("id-ID")}
+                      {totalPrice.toLocaleString(
+                        "id-ID"
+                      )}
                     </span>
                   </div>
 
                   <div className="flex justify-between">
                     <span>PPN 10%</span>
+
                     <span>
                       Rp{" "}
                       {Math.round(
@@ -416,9 +406,10 @@ export default function transaksiPage() {
                     </span>
                   </div>
 
-                  <div className="flex justify-between bg-amber-100 p-3 rounded-lg font-bold text-lg">
+                  <div className="flex justify-between bg-orange-100 p-4 rounded-2xl font-bold text-lg">
                     <span>Total</span>
-                    <span>
+
+                    <span className="text-orange-600">
                       Rp{" "}
                       {Math.round(
                         totalPrice * 1.1
@@ -426,11 +417,11 @@ export default function transaksiPage() {
                     </span>
                   </div>
 
-                  {/* BUTTONS */}
-                  <div className="space-y-2 pt-4">
+                  {/* BUTTON */}
+                  <div className="space-y-3 pt-4">
                     <button
                       disabled={cart.length === 0}
-                      className={`w-full py-3 rounded-lg font-bold text-white ${
+                      className={`w-full py-3 rounded-2xl font-bold text-white transition ${
                         cart.length === 0
                           ? "bg-gray-300 cursor-not-allowed"
                           : "bg-green-600 hover:bg-green-700"
@@ -442,7 +433,7 @@ export default function transaksiPage() {
                     <button
                       onClick={clearCart}
                       disabled={cart.length === 0}
-                      className={`w-full py-3 rounded-lg font-bold ${
+                      className={`w-full py-3 rounded-2xl font-bold transition ${
                         cart.length === 0
                           ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                           : "bg-red-500 text-white hover:bg-red-600"
@@ -455,8 +446,8 @@ export default function transaksiPage() {
               </div>
             </div>
           </div>
-        </main>
-      </div>
+        </section>
+      </main>
     </div>
   );
 }
