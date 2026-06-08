@@ -1,53 +1,45 @@
 export type UserRole = "owner" | "kasir" | "waitres";
 
-export interface UserCredential {
-  id: string;
+export interface User {
+  user_id: number;
   name: string;
   email: string;
-  password: string;
+  phone: string;
   role: UserRole;
 }
 
-export const userCredentials: UserCredential[] = [
-  {
-    id: "u1",
-    name: "Owner Nanyang",
-    email: "owner@nanyang.com",
-    password: "owner123",
-    role: "owner",
-  },
-  {
-    id: "u2",
-    name: "Kasir Emil",
-    email: "kasir@nanyang.com",
-    password: "kasir123",
-    role: "kasir",
-  },
-  {
-    id: "u3",
-    name: "Waitres Sarah",
-    email: "waitres@nanyang.com",
-    password: "waitres123",
-    role: "waitres",
-  },
-];
-
+//fungsi untuk login
 export async function authenticateUser(
   email: string,
-  password: string,
-  role: UserRole,
-) {
-  const normalizedEmail = email.trim().toLowerCase();
-  const credential = userCredentials.find(
-    (user) =>
-      user.email === normalizedEmail &&
-      user.password === password &&
-      user.role === role,
-  );
-
-  return new Promise<UserCredential | null>((resolve) => {
-    setTimeout(() => {
-      resolve(credential ?? null);
-    }, 800);
+  password: string
+): Promise<User | null> {
+  const res = await fetch("http://127.0.0.1:8000/api/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
   });
+
+  if (!res.ok) return null;
+
+  const data = await res.json();
+  return data.user as User;
+}
+
+//fungsi untuk register
+export async function registerUser(data: {
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+  role: UserRole;
+}): Promise<{ message: string; user_id: number } | null> {
+  const res = await fetch("http://127.0.0.1:8000/api/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) return null;
+
+  return await res.json();
 }

@@ -3,13 +3,12 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { authenticateUser, UserRole } from "../lib/auth";
+import { authenticateUser } from "../lib/auth"; 
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("owner");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -20,12 +19,16 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const user = await authenticateUser(email, password, role);
+      const user = await authenticateUser(email, password); // hapus role
       if (!user) {
-        setError("Email, password, atau role tidak sesuai.");
+        setError("Email atau password salah.");
         return;
       }
 
+      // Simpan data user ke localStorage
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // Redirect sesuai role dari backend
       if (user.role === "owner") {
         router.push("/owner");
       } else if (user.role === "kasir") {
@@ -65,33 +68,6 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleLogin} className="space-y-6">
-            {/* Role Selection */}
-            <div>
-              <label className="block text-sm font-semibold text-amber-900 mb-3">
-                Login as
-              </label>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: "Owner", value: "owner" },
-                  { label: "Kasir", value: "kasir" },
-                  { label: "Waitres", value: "waitres" },
-                ].map((item) => (
-                  <button
-                    key={item.value}
-                    type="button"
-                    onClick={() => setRole(item.value as UserRole)}
-                    className={`py-2 px-3 rounded-lg font-semibold transition capitalize ${
-                      role === item.value
-                        ? "bg-gradient-to-r from-amber-700 to-amber-600 text-white"
-                        : "bg-amber-100 text-amber-900 hover:bg-amber-200"
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Email */}
             <div>
               <label
@@ -135,11 +111,7 @@ export default function LoginPage() {
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-amber-700 hover:text-amber-900 transition"
                 >
                   {showPassword ? (
-                    <svg
-                      className="w-5 h-5"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
                       <path
                         fillRule="evenodd"
@@ -148,14 +120,10 @@ export default function LoginPage() {
                       />
                     </svg>
                   ) : (
-                    <svg
-                      className="w-5 h-5"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                       <path
                         fillRule="evenodd"
-                        d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-5.68 1.74L3.707 2.293zM12.168 6.95a2 2 0 012.825.825.75.75 0 001.5-.388C15.75 5.901 14.574 4.5 13 4.5c-1.205 0-2.27.501-3.048 1.309l.854.854.362-.362zM5 10a5 5 0 019.192 1.342.75.75 0 001.5-.484A6.973 6.973 0 005 10c0 .9.156 1.765.424 2.559l1.068-1.068A4.986 4.986 0 015 10zm6-4a.75.75 0 00-.75.75v1.5a.75.75 0 001.5 0v-1.5A.75.75 0 0011 6z"
+                        d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-5.68 1.74L3.707 2.293z"
                         clipRule="evenodd"
                       />
                     </svg>
@@ -168,35 +136,25 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full py-3 px-4 rounded-lg font-bold text-white transition ${
-                role
-                  ? "bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-800 hover:to-amber-700"
-                  : "bg-amber-200 cursor-not-allowed"
-              } ${isLoading ? "opacity-75" : ""}`}
+              className={`w-full py-3 px-4 rounded-lg font-bold text-white transition bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-800 hover:to-amber-700 ${
+                isLoading ? "opacity-75" : ""
+              }`}
             >
               {isLoading ? "loading..." : "login"}
             </button>
-
-
           </form>
 
           {/* Register Link */}
           <p className="text-center mt-6 text-amber-700 text-sm">
             dont have an account?{" "}
-            <Link
-              href="/register"
-              className="text-amber-700 font-bold hover:text-amber-800"
-            >
+            <Link href="/register" className="text-amber-700 font-bold hover:text-amber-800">
               register here
             </Link>
           </p>
 
           {/* Back to Home */}
           <p className="text-center mt-4">
-            <Link
-              href="/"
-              className="text-amber-700 text-sm hover:text-amber-800 font-medium"
-            >
+            <Link href="/" className="text-amber-700 text-sm hover:text-amber-800 font-medium">
               ← back to home
             </Link>
           </p>

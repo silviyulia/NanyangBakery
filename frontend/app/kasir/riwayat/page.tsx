@@ -1,6 +1,7 @@
 "use client";
 
 import Sidebar from "../components/Sidebar";
+import { useEffect } from "react";
 
 export default function RiwayatPage() {
   const transaksi = [

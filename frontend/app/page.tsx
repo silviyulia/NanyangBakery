@@ -263,7 +263,7 @@ export default function Home() {
       {/* ================= FOOTER ================= */}
       <footer className="bg-gradient-to-r from-amber-800 to-amber-700 text-white py-6 text-center mt-10">
         <p className="font-bold text-lg animate-fade-in">
-          Nanyang Bakery & Beverage Shop © 2025
+          Nanyang Bakery & Beverage Shop © 2026
         </p>
         <p className="text-sm text-amber-100 mt-1 animate-fade-in stagger-1">
           Fresh & delicious everyday 💗

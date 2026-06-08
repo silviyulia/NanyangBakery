@@ -2,39 +2,83 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Menu,
-  BarChart3,
-  Package,
-  AlertTriangle,
-  TrendingUp,
-  User,
-  LogOut,
-  X,
-} from "lucide-react";
+import { Menu, LogOut, X } from "lucide-react";
 import Link from "next/link";
+
+interface Employee {
+  user_id: number;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+}
 
 export default function EmployeesPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    phone: "",
+    role: "kasir",
+  });
 
   const menuItems = [
     { name: "Dashboard", icon: "📊", href: "/owner" },
     { name: "Pesanan Real-time", icon: "🛒", href: "/owner/orders" },
     { name: "Laporan", icon: "📄", href: "/owner/reports" },
     { name: "Produk & Menu", icon: "🍪", href: "/owner/products" },
+    {name: "Produksi harian", icon: "🏭", href:"/owner/productions"},
     { name: "Stok Bahan", icon: "📦", href: "/owner/inventory" },
     { name: "Resep Produk", icon: "👨‍🍳", href: "/owner/recipes" },
     { name: "Karyawan", icon: "👥", href: "/owner/employees" },
   ];
-  const [showModal, setShowModal] = useState(false);
 
-  const [form, setForm] = useState({
-    nama: "",
-    email: "",
-    telp: "",
-    posisi: "Waitress",
-  });
+  // Ambil data karyawan dari backend
+  const fetchEmployees = async () => {
+    const res = await fetch("http://127.0.0.1:8000/api/users");
+    if (res.ok) {
+      const data = await res.json();
+      setEmployees(data);
+    }
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  // Submit tambah karyawan
+  const handleSubmit = async () => {
+    setIsLoading(true);
+    setError("");
+    setSuccess("");
+
+    const res = await fetch("http://127.0.0.1:8000/api/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      setError(data.message || "Gagal menambahkan karyawan.");
+      setIsLoading(false);
+      return;
+    }
+
+    setSuccess("Karyawan berhasil ditambahkan!");
+    setForm({ name: "", email: "", password: "", phone: "", role: "kasir" });
+    setIsLoading(false);
+    setShowModal(false);
+    fetchEmployees(); // refresh tabel
+  };
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -46,9 +90,7 @@ export default function EmployeesPage() {
       >
         <div className="p-6 border-b border-amber-700">
           <div className="flex items-center gap-3">
-            <div className="bg-orange-500 rounded-lg p-2 font-bold text-lg">
-              🥖
-            </div>
+            <div className="bg-orange-500 rounded-lg p-2 font-bold text-lg">🥖</div>
             <div>
               <h1 className="font-bold text-lg">Bakery POS</h1>
               <p className="text-xs text-amber-200">Owner</p>
@@ -84,14 +126,13 @@ export default function EmployeesPage() {
         </div>
       </aside>
 
-      {/*MODAL POP UP TAMBAH WARYAWAN */}
+      {/* MODAL TAMBAH KARYAWAN */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => setShowModal(false)}
-          ></div>
-          {/* MODAL */}
+          />
           <div className="relative bg-white w-full max-w-md rounded-2xl shadow-lg p-6 z-10">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold">Tambah Karyawan</h3>
@@ -102,13 +143,19 @@ export default function EmployeesPage() {
                 ✖
               </button>
             </div>
-            {/* FORM */}
+
+            {error && (
+              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+
             <div className="space-y-3">
               <input
                 type="text"
                 placeholder="Nama"
-                value={form.nama}
-                onChange={(e) => setForm({ ...form, nama: e.target.value })}
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className="w-full border px-3 py-2 rounded-lg"
               />
               <input
@@ -119,25 +166,30 @@ export default function EmployeesPage() {
                 className="w-full border px-3 py-2 rounded-lg"
               />
               <input
+                type="password"
+                placeholder="Password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                className="w-full border px-3 py-2 rounded-lg"
+              />
+              <input
                 type="text"
                 placeholder="No. Telepon"
-                value={form.telp}
-                onChange={(e) => setForm({ ...form, telp: e.target.value })}
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 className="w-full border px-3 py-2 rounded-lg"
               />
               <select
-                value={form.posisi}
-                onChange={(e) => setForm({ ...form, posisi: e.target.value })}
+                value={form.role}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
                 className="w-full border px-3 py-2 rounded-lg"
               >
-                <option>Waitress</option>
-                <option>Kasir</option>
-                <option>Baker</option>
-                <option>Barista</option>
+                <option value="kasir">Kasir</option>
+                <option value="waitres">Waitres</option>
+                <option value="owner">Owner</option>
               </select>
             </div>
 
-            {/* ACTION */}
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setShowModal(false)}
@@ -145,31 +197,22 @@ export default function EmployeesPage() {
               >
                 Batal
               </button>
-
               <button
-                onClick={() => {
-                  alert("Karyawan berhasil ditambahkan (dummy)");
-                  setShowModal(false);
-
-                  // reset form
-                  setForm({
-                    nama: "",
-                    email: "",
-                    telp: "",
-                    posisi: "Waitress",
-                  });
-                }}
-                className="bg-orange-500 text-white px-4 py-2 rounded-lg"
+                onClick={handleSubmit}
+                disabled={isLoading}
+                className={`bg-orange-500 text-white px-4 py-2 rounded-lg ${
+                  isLoading ? "opacity-75" : ""
+                }`}
               >
-                Simpan
+                {isLoading ? "Menyimpan..." : "Simpan"}
               </button>
             </div>
           </div>
         </div>
       )}
+
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {/* Top Header */}
         <header className="bg-gradient-to-r from-amber-800 to-amber-900 text-white shadow-md p-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button onClick={() => setSidebarOpen(!sidebarOpen)}>
@@ -179,12 +222,9 @@ export default function EmployeesPage() {
           </div>
         </header>
 
-        {/* Main Content Area */}
         <main className="flex-1 overflow-auto p-8 space-y-6">
-          {/* HEADER */}
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold">Data Karyawan</h2>
-
             <button
               onClick={() => setShowModal(true)}
               className="bg-orange-500 text-white px-4 py-2 rounded-lg"
@@ -193,67 +233,46 @@ export default function EmployeesPage() {
             </button>
           </div>
 
-          {/* TABLE */}
+          {success && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+              {success}
+            </div>
+          )}
+
           <div className="bg-white rounded-xl shadow border overflow-x-auto">
             <table className="w-full text-sm text-left">
-              {/* HEADER */}
               <thead className="bg-gray-200 text-gray-700">
                 <tr>
                   <th className="px-6 py-3">No.</th>
                   <th className="px-6 py-3">Nama</th>
                   <th className="px-6 py-3">Email</th>
                   <th className="px-6 py-3">No. Telepon</th>
-                  <th className="px-6 py-3">Posisi</th>
+                  <th className="px-6 py-3">Role</th>
                   <th className="px-6 py-3 text-center">Aksi</th>
                 </tr>
               </thead>
-
-              {/* BODY */}
               <tbody>
-                {[
-                  {
-                    nama: "Sarah Riyanti",
-                    email: "sarah@gmail.com",
-                    telp: "09826251678",
-                    posisi: "Waitress",
-                  },
-                  {
-                    nama: "Ayu Asri",
-                    email: "ayu@gmail.com",
-                    telp: "09826251678",
-                    posisi: "Waitress",
-                  },
-                  {
-                    nama: "Bagus",
-                    email: "bagus@gmail.com",
-                    telp: "09826251678",
-                    posisi: "Waitress",
-                  },
-                  {
-                    nama: "Dika",
-                    email: "dika@gmail.com",
-                    telp: "09826251678",
-                    posisi: "Kasir",
-                  },
-                ].map((emp, i) => (
-                  <tr key={i} className="border-t hover:bg-gray-50">
-                    <td className="px-6 py-4">{i + 1}</td>
-                    <td className="px-6 py-4 font-medium">{emp.nama}</td>
-                    <td className="px-6 py-4">{emp.email}</td>
-                    <td className="px-6 py-4">{emp.telp}</td>
-                    <td className="px-6 py-4">{emp.posisi}</td>
-
-                    {/* AKSI */}
-                    <td className="px-6 py-4 text-center space-x-2">
-                      <button className="text-blue-500 hover:underline text-sm">
-                        Edit
-                      </button>
-                      <button className="text-red-500 hover:underline text-sm">
-                        Hapus
-                      </button>
+                {employees.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
+                      Belum ada data karyawan.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  employees.map((emp, i) => (
+                    <tr key={emp.user_id} className="border-t hover:bg-gray-50">
+                      <td className="px-6 py-4">{i + 1}</td>
+                      <td className="px-6 py-4 font-medium">{emp.name}</td>
+                      <td className="px-6 py-4">{emp.email}</td>
+                      <td className="px-6 py-4">{emp.phone}</td>
+                      <td className="px-6 py-4 capitalize">{emp.role}</td>
+                      <td className="px-6 py-4 text-center space-x-2">
+                        <button className="text-blue-500 hover:underline text-sm">Edit</button>
+                        <button className="text-red-500 hover:underline text-sm">Hapus</button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
