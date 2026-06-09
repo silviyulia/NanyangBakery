@@ -26,6 +26,7 @@ export default function ProductsPage() {
   const [category_id, setCategory_id] = useState("");
   const [price, setPrice] = useState("");
   const [status, setStatus] = useState("active");
+  const [imagePreview, setImagePreview] = useState<string>("");
   const menuItems = [
     { name: "Dashboard", icon: "📊", href: "/owner" },
     { name: "Pesanan Real-time", icon: "🛒", href: "/owner/orders" },
@@ -43,87 +44,172 @@ export default function ProductsPage() {
   const [editId, setEditId] = useState<number | null>(null);
 
   const loadProducts = async () => {
-  try {
-    const res = await fetch(
-      "http://127.0.0.1:8000/api/products"
-    );
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/products");
 
-    if (!res.ok) {
-      throw new Error("Gagal mengambil data produk");
-    }
-
-    const data = await res.json();
-
-    console.log("Products:", data);
-
-    setProducts(data);
-  } catch (error) {
-    console.error("Load Product Error:", error);
-  }
-};
-
-useEffect(() => {
-  loadProducts();
-}, []);
-
-const handleAddProduct = async () => {
-  try {
-    const formData = new FormData();
-
-    formData.append("category_id", category_id);
-    formData.append("name", name);
-    formData.append("price", price);
-    formData.append("status", status);
-
-    if (image) {
-      formData.append("image", image);
-    }
-
-    const res = await fetch(
-      "http://127.0.0.1:8000/api/products",
-      {
-        method: "POST",
-        body: formData,
+      if (!res.ok) {
+        throw new Error("Gagal mengambil data produk");
       }
-    );
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      throw new Error(data.message);
+      console.log("Products:", data);
+
+      setProducts(data);
+    } catch (error) {
+      console.error("Load Product Error:", error);
+    }
+  };
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  const handleAddProduct = async () => {
+    if (!name || !category_id || !price) {
+      alert("Semua field harus diisi");
+      return;
     }
 
-    alert("Produk berhasil ditambahkan");
+    try {
+      const formData = new FormData();
 
-    setName("");
-    setCategory_id("");
-    setPrice("");
-    setStatus("active");
+      formData.append("category_id", category_id);
+      formData.append("name", name);
+      formData.append("price", price);
+      formData.append("status", status);
+
+      if (image) {
+        formData.append("image", image);
+      }
+
+      const url = editId
+        ? `http://127.0.0.1:8000/api/products/${editId}`
+        : "http://127.0.0.1:8000/api/products";
+
+      const method = editId ? "PUT" : "POST";
+
+      console.log(`${method} ${url}`, {
+        editId,
+        name,
+        category_id,
+        price,
+        status,
+      });
+
+      const res = await fetch(url, {
+        method: method,
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      console.log("Response:", data, "Status:", res.status);
+
+      if (!res.ok) {
+        throw new Error(data.message || "Gagal menyimpan produk");
+      }
+
+      alert(
+        editId ? "Produk berhasil diperbarui" : "Produk berhasil ditambahkan",
+      );
+
+      setName("");
+      setCategory_id("");
+      setPrice("");
+      setStatus("active");
+      setImage(null);
+      setImagePreview("");
+      setEditId(null);
+
+      setShowModal(false);
+
+      await loadProducts();
+    } catch (error) {
+      console.error("Error:", error);
+      alert(
+        `${editId ? "Gagal memperbarui" : "Gagal menambahkan"} produk: ${error}`,
+      );
+    }
+  };
+
+  const handleEdit = (product: Product) => {
+    console.log("Editing product:", product);
+    setEditId(product.product_id);
+    setName(product.name);
+    setCategory_id(String(product.category_id));
+    setPrice(String(product.price));
+    setStatus(product.status);
     setImage(null);
+    setImagePreview(
+      product.image ? `http://127.0.0.1:8000/storage/${product.image}` : "",
+    );
+    setShowModal(true);
+  };
 
-    setShowModal(false);
+  const handleDelete = async (product_id: number) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus produk ini?")) {
+      return;
+    }
 
-    await loadProducts();
-  } catch (error) {
-    console.error(error);
-    alert("Gagal menambahkan produk");
-  }
-};
-  const categories = ["Semua"];
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/products/${product_id}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message);
+      }
+
+      alert("Produk berhasil dihapus");
+      await loadProducts();
+    } catch (error) {
+      console.error(error);
+      alert("Gagal menghapus produk");
+    }
+  };
+
+const [filterSearch, setFilterSearch] = useState("");
+const [filterCategory, setFilterCategory] = useState("Semua");
+const categories = [
+  "Semua",
+  ...Array.from(
+    new Set(products.map((p) => p.category_id))
+  ).map((id) => {
+    if (id === 1) return "Roti&Pastry";
+    if (id === 2) return "Kue&Cake";
+    if (id === 3) return "Minuman";
+    return `Kategori ${id}`;
+  }),
+];
 
   // FILTER LOGIC
   const filteredProducts = products.filter((product) => {
-    const matchSearch = product.name
-      .toLowerCase()
-      .includes(search.toLowerCase());
 
-    const matchCategory = true;
+  const matchSearch = product.name
+    .toLowerCase()
+    .includes(filterSearch.toLowerCase());
 
-    const matchStatus =
-      statusFilter === "Semua" || product.status === statusFilter;
 
-    return matchSearch && matchCategory && matchStatus;
-  });
+  let categoryName = "Kategori " + product.category_id;
+
+  if(product.category_id === 1) categoryName="Roti&Pastry";
+  if(product.category_id === 2) categoryName="Kue&Cake";
+  if(product.category_id === 3) categoryName="Minuman";
+
+
+  const matchCategory =
+    filterCategory === "Semua" ||
+    categoryName === filterCategory;
+
+
+  return matchSearch && matchCategory;
+});
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -204,10 +290,21 @@ const handleAddProduct = async () => {
             {/* MODAL */}
             <div className="relative bg-white w-full max-w-lg rounded-2xl shadow-lg p-6 z-10">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold">Tambah Produk</h3>
+                <h3 className="text-lg font-bold">
+                  {editId ? "Edit Produk" : "Tambah Produk"}
+                </h3>
 
                 <button
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowModal(false);
+                    setEditId(null);
+                    setName("");
+                    setCategory_id("");
+                    setPrice("");
+                    setStatus("active");
+                    setImage(null);
+                    setImagePreview("");
+                  }}
                   className="text-gray-400 hover:text-black text-xl"
                 >
                   ✖
@@ -256,16 +353,61 @@ const handleAddProduct = async () => {
                 </select>
 
                 {/* Gambar */}
-                <input
-                  type="file"
-                  className="w-full border px-3 py-2 rounded-lg"
-                />
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Foto Produk
+                  </label>
+                  {imagePreview && (
+                    <div className="mb-3">
+                      <img
+                        src={imagePreview}
+                        alt="preview"
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      {editId && !image && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Foto produk saat ini
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      setImage(file);
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setImagePreview(reader.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="w-full border px-3 py-2 rounded-lg"
+                    accept="image/*"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {editId
+                      ? "Pilih gambar baru untuk mengganti (opsional)"
+                      : "JPG, PNG,webp max 2MB"}
+                  </p>
+                </div>
               </div>
 
               {/* FOOTER */}
               <div className="flex justify-end gap-3 mt-6">
                 <button
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowModal(false);
+                    setEditId(null);
+                    setName("");
+                    setCategory_id("");
+                    setPrice("");
+                    setStatus("active");
+                    setImage(null);
+                    setImagePreview("");
+                  }}
                   className="px-4 py-2 border rounded-lg"
                 >
                   Batal
@@ -275,7 +417,7 @@ const handleAddProduct = async () => {
                   onClick={handleAddProduct}
                   className="bg-orange-500 text-white px-4 py-2 rounded-lg"
                 >
-                  Simpan
+                  {editId ? "Perbarui" : "Simpan"}
                 </button>
               </div>
             </div>
@@ -290,7 +432,16 @@ const handleAddProduct = async () => {
               <p className="text-gray-500 text-sm">Kelola produk</p>
             </div>
             <button
-              onClick={() => setShowModal(true)}
+              onClick={() => {
+                setEditId(null);
+                setName("");
+                setCategory_id("");
+                setPrice("");
+                setStatus("active");
+                setImage(null);
+                setImagePreview("");
+                setShowModal(true);
+              }}
               className="bg-orange-500 text-white px-4 py-2 rounded-lg"
             >
               + Tambah Produk
@@ -299,100 +450,80 @@ const handleAddProduct = async () => {
 
           {/* SEARCH + FILTER */}
           <div className="bg-white p-4 rounded-xl flex gap-3">
-          <input
-            type="text"
-            placeholder="Nama produk"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full border px-3 py-2 rounded-lg"
-          />
-
-          <select
-            value={category_id}
-            onChange={(e) => setCategory_id(e.target.value)}
-            className="w-full border px-3 py-2 rounded-lg"
-          >
-            <option value="">Pilih Kategori</option>
-            <option value="1">Roti & Pastry</option>
-            <option value="2">Kue & Cake</option>
-            <option value="3">Minuman</option>
-          </select>
 
           <input
-            type="number"
-            placeholder="Harga"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className="w-full border px-3 py-2 rounded-lg"
+          type="text"
+          placeholder="Cari produk..."
+          value={filterSearch}
+          onChange={(e)=>setFilterSearch(e.target.value)}
+          className="w-full border px-3 py-2 rounded-lg"
           />
-
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="w-full border px-3 py-2 rounded-lg"
-          >
-            <option value="active">Aktif</option>
-            <option value="inactive">Nonaktif</option>
-          </select>
-          </div>
+        </div>
 
           {/* TAB CATEGORY */}
           <div className="flex gap-3 mb-6">
-            {categories.map((cat, i) => (
-              <button
-                key={i}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-2 rounded-full text-sm ${
-                  activeCategory === cat
-                    ? "bg-orange-500 text-white"
-                    : "bg-gray-100"
-                }`}
-              >
-                {cat}
-              </button>
+          {categories.map((cat,i)=>(
+
+            <button
+            key={i}
+            onClick={()=>setFilterCategory(cat)}
+            className={`px-4 py-2 rounded-full text-sm ${
+            filterCategory===cat
+            ? "bg-orange-500 text-white"
+            : "bg-gray-100"
+            }`}
+            >
+            {cat}
+            </button>
             ))}
-          </div>
+            </div>
 
           {/* GRID */}
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-           {products.map((p) => (
-            <div
-              key={p.product_id}
-              className="bg-white p-4 rounded-xl border shadow"
-            >
-              <div className="h-32 w-full overflow-hidden rounded-lg">
-                <img
-                  src={
-                    p.image
-                      ? `http://127.0.0.1:8000/storage/${p.image}`
-                      : "/no-image.png"
-                  }
-                  alt={p.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              <h3 className="font-bold mt-2">{p.name}</h3>
-
-              <p className="text-orange-500 font-bold">
-                Rp {Number(p.price).toLocaleString("id-ID")}
-              </p>
-
-              <span
-                className={`text-xs px-2 py-1 rounded mt-2 inline-block ${
-                  p.status === "active"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-600"
-                }`}
+            {filteredProducts.map((p)=>(
+              <div
+                key={p.product_id}
+                className="bg-white p-4 rounded-xl border shadow"
               >
-                {p.status}
-              </span>
+                <div className="h-32 w-full overflow-hidden rounded-lg">
+                  <img
+                    src={
+                      p.image
+                        ? `http://127.0.0.1:8000/storage/${p.image}`
+                        : "/no-image.png"
+                    }
+                    alt={p.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
+                <h3 className="font-bold mt-2">{p.name}</h3>
+
+                <p className="text-orange-500 font-bold">
+                  Rp {Number(p.price).toLocaleString("id-ID")}
+                </p>
+
+                <span
+                  className={`text-xs px-2 py-1 rounded mt-2 inline-block ${
+                    p.status === "active"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-600"
+                  }`}
+                >
+                  {p.status}
+                </span>
                 {/* BUTTON */}
                 <div className="flex gap-2 mt-3">
-                  <button className="flex-1 border py-2 rounded-lg text-sm" >
+                  <button
+                    onClick={() => handleEdit(p)}
+                    className="flex-1 border py-2 rounded-lg text-sm hover:bg-blue-50"
+                  >
                     Edit
                   </button>
-                  <button className="px-3 border text-red-500 rounded-lg">
+                  <button
+                    onClick={() => handleDelete(p.product_id)}
+                    className="px-3 border text-red-500 rounded-lg hover:bg-red-50"
+                  >
                     Hapus
                   </button>
                 </div>

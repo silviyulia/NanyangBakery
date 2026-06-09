@@ -71,46 +71,36 @@ class ProductController extends Controller
     // Update product
     public function update(Request $request,$id)
     {
-
+        $validated = $request->validate([
+            'category_id' => 'required|integer',
+            'name' => 'required|string|max:100',
+            'price' => 'required|numeric',
+            'status' => 'required|in:active,inactive',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        ]);
 
         $data = [
-
-            'category_id'=>$request->category_id,
-
-            'name'=>$request->name,
-
-            'price'=>$request->price,
-
-            'status'=>$request->status,
-
+            'category_id' => $validated['category_id'],
+            'name' => $validated['name'],
+            'price' => $validated['price'],
+            'status' => $validated['status'],
         ];
 
-
-
         if($request->hasFile('image')){
-
-
             $imagePath = $request
                 ->file('image')
                 ->store('products','public');
 
-
-            $data['image']=$imagePath;
-
+            $data['image'] = $imagePath;
         }
 
-
-
         DB::table('products')
-        ->where('product_id',$id)
-        ->update($data);
-
-
+            ->where('product_id',$id)
+            ->update($data);
 
         return response()->json([
-            'message'=>'Produk berhasil diupdate'
-        ]);
-
+            'message' => 'Produk berhasil diupdate'
+        ], 200);
     }
 
 
