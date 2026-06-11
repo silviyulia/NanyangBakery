@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
@@ -12,46 +15,68 @@ class Order extends Model
     protected $table = 'orders';
     protected $primaryKey = 'order_id';
     public $incrementing = true;
-    protected $keyType = 'int';
+    protected $keyType = 'bigint';
 
     protected $fillable = [
-        'table_name',
+        'table_id',
+        'waitres_id',
         'status',
-        'waiter_id',
-        'total',
-        'started_at',
-        'completed_at',
+        'total_price',
+        'notes',
     ];
 
     protected $casts = [
-        'total' => 'decimal:2',
+        'total_price' => 'decimal:2',
         'created_at' => 'datetime',
-        'started_at' => 'datetime',
-        'completed_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
 
     /**
-     * Get the order items for this order.
+     * Get the table associated with the order.
      */
-    public function items()
+    public function table(): BelongsTo
+    {
+        return $this->belongsTo(Table::class, 'table_id', 'table_id');
+    }
+
+    /**
+     * Get the waitres who created the order.
+     */
+    public function waitres(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'waitres_id', 'user_id');
+    }
+
+    /**
+     * Get all items in the order.
+     */
+    public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class, 'order_id', 'order_id');
     }
 
     /**
-     * Get the waiter who handled this order.
+     * Get the transaction for this order.
      */
-    public function waiter()
+    public function transaction(): HasOne
     {
-        return $this->belongsTo(User::class, 'waiter_id', 'id');
+        return $this->hasOne(Transaction::class, 'order_id', 'order_id');
     }
 
     /**
-     * Get the transaction for this order.
+     * Calculate total price from order items.
      */
-    public function transaction()
+    public function calculateTotal(): void
     {
-        return $this->hasOne(Transaction::class, 'order_id', 'order_id');
+        $this->total_price = $this->items->sum('subtotal');
+        $this->save();
+    }
+
+    /**
+     * Check if order can be confirmed.
+     */
+    public function canBeConfirmed(): bool
+    {
+        return $this->status === 'pending' && $this->items()->count() > 0;
     }
 }

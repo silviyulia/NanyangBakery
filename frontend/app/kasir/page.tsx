@@ -5,23 +5,28 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type Order = {
-  id: string;
-  meja: string;
-  status: "proses" | "selesai" | "batal";
-  masuk: string;
-  selesai?: string;
-  waiter: string;
-  total: number;
+  order_id: string;
+  table_id: string;
+  status: "pending" | "confirmed" | "completed" | "cancelled";
+  created_at: string;
+  updated_at?: string;
+  waitres_id: number;
+  total_price: number;
   items: {
-    name: string;
-    qty: number;
+    order_item_id: string;
+    product_id: string;
+    quantity: number;
     price: number;
   }[];
+  table?: { table_number: string };
+  waitres?: { name: string };
 };
 
 export default function KasirDashboard() {
   const [activeFilter, setActiveFilter] = useState("semua");
   const [now, setNow] = useState(new Date());
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // realtime timer
   useEffect(() => {
@@ -32,133 +37,32 @@ export default function KasirDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const initialOrders: Order[] = [
-    {
-      id: "M1",
-      meja: "Meja 1",
-      status: "selesai",
-      masuk: "14:32",
-      selesai: "-",
-      waiter: "Sarah",
-      total: 125000,
-      items: [
-        { name: "Croissant", qty: 2, price: 30000 },
-        { name: "Espresso", qty: 1, price: 25000 },
-        { name: "Cake Coklat", qty: 1, price: 40000 },
-      ],
-    },
-    {
-      id: "M2",
-      meja: "Meja 2",
-      status: "batal",
-      masuk: "14:35",
-      selesai: "-",
-      waiter: "Sarah",
-      total: 125000,
-      items: [
-        { name: "Croissant", qty: 2, price: 30000 },
-        { name: "Espresso", qty: 1, price: 25000 },
-        { name: "Cake Coklat", qty: 1, price: 40000 },
-      ],
-    },
-    {
-      id: "M3",
-      meja: "Meja 3",
-      status: "proses",
-      masuk: "14:40",
-      waiter: "Sarah",
-      total: 125000,
-      items: [
-        { name: "Croissant", qty: 2, price: 30000 },
-        { name: "Espresso", qty: 1, price: 25000 },
-        { name: "Cake Coklat", qty: 1, price: 40000 },
-      ],
-    },
-    {
-      id: "M4",
-      meja: "Meja 4",
-      status: "selesai",
-      masuk: "14:10",
-      selesai: "14:30",
-      waiter: "Budi",
-      total: 85000,
-      items: [
-        { name: "Croissant", qty: 2, price: 30000 },
-        { name: "Espresso", qty: 1, price: 25000 },
-      ],
-    },
-    {
-      id: "M5",
-      meja: "Meja 5",
-      status: "batal",
-      masuk: "14:50",
-      waiter: "Andi",
-      total: 80000,
-      items: [
-        { name: "Croissant", qty: 1, price: 30000 },
-        { name: "Espresso", qty: 2, price: 25000 },
-      ],
-    },
-    {
-      id: "M6",
-      meja: "Meja 6",
-      status: "proses",
-      masuk: "14:55",
-      waiter: "Sarah",
-      total: 110000,
-      items: [
-        { name: "Cake Coklat", qty: 2, price: 40000 },
-        { name: "Croissant", qty: 1, price: 30000 },
-      ],
-    },
-  ];
-
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
-
-  const getOrderTotal = (
-    items: {
-      name: string;
-      qty: number;
-      price: number;
-    }[],
-  ) =>
-    items.reduce(
-      (sum, item) => sum + item.price * item.qty,
-      0,
-    );
-
+  // Fetch orders dari API
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    const fetchOrders = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch("http://127.0.0.1:8000/api/orders");
+        if (!res.ok) throw new Error("Gagal mengambil data pesanan");
+        const data = await res.json();
+        setOrders(data);
+      } catch (error) {
+        console.error("Error loading orders:", error);
+        setOrders([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    const savedOrder = window.localStorage.getItem(
-      "savedOrder",
-    );
-    if (!savedOrder) return;
-
-    try {
-      const parsed = JSON.parse(savedOrder);
-      if (!parsed?.table || !Array.isArray(parsed.items)) return;
-
-      setOrders((prevOrders) =>
-        prevOrders.map((order) =>
-          order.meja === parsed.table
-            ? {
-                ...order,
-                status: "proses",
-                items: parsed.items,
-                total:
-                  typeof parsed.total === "number"
-                    ? parsed.total
-                    : getOrderTotal(parsed.items),
-                selesai: undefined,
-              }
-            : order,
-        ),
-      );
-    } catch (error) {
-      console.error("Gagal memuat pesanan tersimpan:", error);
-    }
+    fetchOrders();
+    
+    // Refresh setiap 5 detik
+    const interval = setInterval(fetchOrders, 5000);
+    return () => clearInterval(interval);
   }, []);
+
+  const getOrderTotal = (items: any[]) =>
+    items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const filteredOrders = orders.filter(
     (order) =>
@@ -167,12 +71,14 @@ export default function KasirDashboard() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "selesai":
+      case "completed":
         return "bg-green-100 text-green-700";
-      case "proses":
+      case "confirmed":
         return "bg-yellow-100 text-yellow-700";
-      case "batal":
+      case "cancelled":
         return "bg-red-100 text-red-700";
+      case "pending":
+        return "bg-blue-100 text-blue-700";
       default:
         return "bg-gray-100 text-gray-700";
     }
@@ -180,20 +86,23 @@ export default function KasirDashboard() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "selesai":
+      case "completed":
         return "Selesai";
-      case "proses":
-        return "Proses";
-      case "batal":
+      case "confirmed":
+        return "Dikonfirmasi";
+      case "cancelled":
         return "Batal";
+      case "pending":
+        return "Pending";
       default:
         return status;
     }
   };
 
-  const getDuration = () => {
-    const seconds = now.getSeconds();
-    return `40${seconds}m 33s`;
+  const formatTime = (dateString?: string) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
   };
 
   return (
@@ -217,7 +126,7 @@ export default function KasirDashboard() {
               <p className="font-bold text-[#b65a00] leading-none">
                 kasir
               </p>
-              <span className="text-sm text-gray-500">hau</span>
+              <span className="text-sm text-gray-500">System</span>
             </div>
           </div>
         </header>
@@ -228,9 +137,10 @@ export default function KasirDashboard() {
           <div className="mb-8 flex flex-wrap gap-3">
             {[
               { label: "Semua", value: "semua" },
-              { label: "Proses", value: "proses" },
-              { label: "Selesai", value: "selesai" },
-              { label: "Dibatalkan", value: "batal" },
+              { label: "Pending", value: "pending" },
+              { label: "Dikonfirmasi", value: "confirmed" },
+              { label: "Selesai", value: "completed" },
+              { label: "Dibatalkan", value: "cancelled" },
             ].map((filter) => (
               <button
                 key={filter.value}
@@ -250,13 +160,13 @@ export default function KasirDashboard() {
           <div className="mb-6 flex items-center justify-between rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
             <div>
               <h3 className="text-2xl font-semibold text-[#5c2500]">
-                Menampilkan Pesanan
+                {loading ? "Loading..." : "Pesanan Terbaru"}
               </h3>
 
               <p className="text-gray-600 text-sm">
-                {activeFilter === "semua"
-                  ? "Semua pesanan ditampilkan"
-                  : `Menampilkan pesanan ${activeFilter}`}
+                {loading
+                  ? "Mengambil data..."
+                  : `Total: ${filteredOrders.length} pesanan`}
               </p>
             </div>
 
@@ -269,38 +179,33 @@ export default function KasirDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredOrders.map((order) => (
               <div
-                key={order.id}
-                aria-disabled={order.status !== "proses"}
-                className={`bg-white rounded-2xl border border-gray-300 overflow-hidden shadow-sm transition-all duration-300 ease-in-out ${
-                  order.status !== "proses"
-                    ? "opacity-80 pointer-events-none"
-                    : ""
-                }`}
+                key={order.order_id}
+                className={`bg-white rounded-2xl border border-gray-300 overflow-hidden shadow-sm transition-all duration-300 ease-in-out`}
               >
                 {/* HEADER CARD */}
                 <div className="bg-[#f2dfbf] p-4 border-b">
                   <div className="flex items-start justify-between">
                     <div>
-                      <span className="bg-orange-500 text-white px-3 py-1 rounded-md text-sm font-bold">
-                        {order.id}
+                      <span className={`px-3 py-1 rounded-md text-sm font-bold text-white ${getStatusColor(order.status)}`}>
+                        {order.order_id}
                       </span>
 
                       <h3 className="font-bold text-2xl mt-3">
-                        {order.meja}
+                        Meja {order.table?.table_number || order.table_id}
                       </h3>
 
                       <div className="text-sm mt-2 space-y-1">
-                        <p>Masuk: {order.masuk}</p>
+                        <p>Masuk: {formatTime(order.created_at)}</p>
 
-                        {order.status === "proses" && (
+                        {order.status === "confirmed" && (
                           <p className="text-orange-600">
-                            Durasi: {getDuration()}
+                            Status: Dikonfirmasi
                           </p>
                         )}
 
-                        {order.status === "selesai" && (
+                        {order.status === "completed" && (
                           <p className="text-green-600">
-                            Selesai: {order.selesai}
+                            Selesai
                           </p>
                         )}
                       </div>
@@ -319,17 +224,17 @@ export default function KasirDashboard() {
                 {/* BODY */}
                 <div className="p-4">
                   <div className="space-y-3 border-b pb-4">
-                    {order.items.map((item, index) => (
+                    {order.items && order.items.map((item, index) => (
                       <div
                         key={index}
                         className="flex justify-between"
                       >
                         <p>
-                          {item.qty}x {item.name}
+                          {item.quantity}x Item
                         </p>
 
                         <span className="text-orange-600 font-semibold">
-                          Rp {item.price.toLocaleString()}
+                          Rp {(item.price * item.quantity).toLocaleString()}
                         </span>
                       </div>
                     ))}
@@ -341,22 +246,20 @@ export default function KasirDashboard() {
                       <span>Total</span>
 
                       <span className="text-orange-600">
-                        Rp {order.total.toLocaleString()}
+                        Rp {order.total_price.toLocaleString()}
                       </span>
                     </div>
 
                     <p className="text-sm text-gray-500 mt-4">
-                      Waiter: {order.waiter}
+                      Waiter: {order.waitres?.name || "System"}
                     </p>
-                    {order.status === "proses" && (
+                    {order.status === "confirmed" && (
                       <div className="mt-4">
                         <Link
-                          href={`/kasir/transaksi?table=${encodeURIComponent(
-                            order.meja,
-                          )}`}
+                          href={`/kasir/transaksi?order=${order.order_id}`}
                           className="w-full inline-block text-center py-3 bg-orange-500 text-white rounded-2xl font-semibold hover:bg-orange-600"
                         >
-                          Lihat Transaksi
+                          Proses Transaksi
                         </Link>
                       </div>
                     )}
@@ -367,7 +270,7 @@ export default function KasirDashboard() {
           </div>
 
           {/* EMPTY */}
-          {filteredOrders.length === 0 && (
+          {!loading && filteredOrders.length === 0 && (
             <div className="text-center text-gray-400 mt-20">
               Tidak ada pesanan
             </div>

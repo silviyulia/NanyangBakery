@@ -11,7 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Tidak ada di database SQL, skip - Lihat 2024_06_08_000016
+        Schema::create('tables', function (Blueprint $table) {
+            $table->id('table_id');
+            $table->string('table_number', 20);
+            $table->integer('capacity');
+            $table->enum('status', ['available', 'occupied', 'reserved'])->default('available');
+        });
     }
 
     /**
@@ -19,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Skip
+        Schema::dropIfExists('tables');
     }
 };

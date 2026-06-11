@@ -1,47 +1,60 @@
 "use client";
 
 import Sidebar from "../components/Sidebar";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+
+interface Transaction {
+  transaction_id: string;
+  order_id?: string;
+  created_at: string;
+  total_amount: number;
+  payment_method: string;
+  amount_paid: number;
+  payment_status: string;
+  kasir?: { name: string };
+  receipt?: { receipt_number: string };
+}
 
 export default function RiwayatPage() {
-  const transaksi = [
-    {
-      no: 1,
-      tanggal: "2025-05-20",
-      meja: "Meja 1",
-      items: "2x Croissant, 1x Espresso",
-      total: "Rp 125.000",
-      metode: "Cash",
-      kasir: "Hau",
-    },
-    {
-      no: 2,
-      tanggal: "2025-05-20",
-      meja: "Meja 2",
-      items: "1x Cake Coklat, 2x Espresso",
-      total: "Rp 110.000",
-      metode: "QRIS",
-      kasir: "Hau",
-    },
-    {
-      no: 3,
-      tanggal: "2025-05-20",
-      meja: "Meja 3",
-      items: "2x Croissant",
-      total: "Rp 60.000",
-      metode: "Debit",
-      kasir: "Hau",
-    },
-    {
-      no: 4,
-      tanggal: "2025-05-20",
-      meja: "Meja 4",
-      items: "1x Espresso, 1x Cake Coklat",
-      total: "Rp 65.000",
-      metode: "Cash",
-      kasir: "Hau",
-    },
-  ];
+  const [transaksi, setTransaksi] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch("http://127.0.0.1:8000/api/transactions");
+        if (!res.ok) throw new Error("Gagal mengambil data transaksi");
+        const data = await res.json();
+        setTransaksi(data);
+      } catch (err) {
+        console.error("Error loading transactions:", err);
+        setError("Gagal memuat data transaksi");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("id-ID", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   return (
     <div className="min-h-screen bg-[#f4ece7] flex">
@@ -65,7 +78,7 @@ export default function RiwayatPage() {
               <p className="font-bold text-[#b65a00] leading-none">
                 kasir
               </p>
-              <span className="text-sm text-gray-500">hau</span>
+              <span className="text-sm text-gray-500">System</span>
             </div>
           </div>
         </header>
@@ -80,7 +93,7 @@ export default function RiwayatPage() {
               </h3>
 
               <p className="text-sm text-gray-600">
-                Semua data transaksi kasir
+                {loading ? "Loading..." : "Semua data transaksi kasir"}
               </p>
             </div>
 
@@ -89,6 +102,12 @@ export default function RiwayatPage() {
             </span>
           </div>
 
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+              {error}
+            </div>
+          )}
+
           {/* TABLE */}
           <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
@@ -96,77 +115,99 @@ export default function RiwayatPage() {
                 {/* TABLE HEADER */}
                 <thead className="bg-[#f2dfbf] text-[#5c2500]">
                   <tr>
-                    <th className="px-6 py-4 text-left">NO</th>
-                    <th className="px-6 py-4 text-left">Tanggal</th>
-                    <th className="px-6 py-4 text-left">Meja</th>
-                    <th className="px-6 py-4 text-left">Items</th>
-                    <th className="px-6 py-4 text-left">Total</th>
-                    <th className="px-6 py-4 text-left">Metode</th>
-                    <th className="px-6 py-4 text-left">Kasir</th>
-                    <th className="px-6 py-4 text-center">Struk</th>
+                    <th className="px-6 py-4 text-left">ID TRANSAKSI</th>
+                    <th className="px-6 py-4 text-left">TANGGAL</th>
+                    <th className="px-6 py-4 text-left">WAKTU</th>
+                    <th className="px-6 py-4 text-left">TOTAL</th>
+                    <th className="px-6 py-4 text-left">BAYAR</th>
+                    <th className="px-6 py-4 text-left">METODE</th>
+                    <th className="px-6 py-4 text-left">STATUS</th>
+                    <th className="px-6 py-4 text-center">STRUK</th>
                   </tr>
                 </thead>
 
                 {/* TABLE BODY */}
                 <tbody>
-                  {transaksi.map((item, index) => (
-                    <tr
-                      key={index}
-                      className="border-t hover:bg-orange-50 transition"
-                    >
-                      <td className="px-6 py-4 font-semibold">
-                        {item.no}
-                      </td>
+                  {!loading && transaksi.length > 0 ? (
+                    transaksi.map((item, index) => (
+                      <tr
+                        key={item.transaction_id}
+                        className="border-t hover:bg-orange-50 transition"
+                      >
+                        <td className="px-6 py-4 font-semibold">
+                          {item.receipt?.receipt_number || item.transaction_id}
+                        </td>
 
-                      <td className="px-6 py-4">
-                        {item.tanggal}
-                      </td>
+                        <td className="px-6 py-4">
+                          {formatDate(item.created_at)}
+                        </td>
 
-                      <td className="px-6 py-4 font-medium">
-                        {item.meja}
-                      </td>
+                        <td className="px-6 py-4">
+                          {formatTime(item.created_at)}
+                        </td>
 
-                      <td className="px-6 py-4">
-                        {item.items}
-                      </td>
+                        <td className="px-6 py-4 font-semibold text-orange-600">
+                          Rp {item.total_amount.toLocaleString("id-ID")}
+                        </td>
 
-                      <td className="px-6 py-4 font-semibold text-orange-600">
-                        {item.total}
-                      </td>
+                        <td className="px-6 py-4">
+                          Rp {item.amount_paid.toLocaleString("id-ID")}
+                        </td>
 
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold
-                            ${
-                              item.metode === "Cash"
+                        <td className="px-6 py-4">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              item.payment_method === "cash"
                                 ? "bg-green-100 text-green-700"
-                                : item.metode === "QRIS"
+                                : item.payment_method === "qris"
                                   ? "bg-blue-100 text-blue-700"
                                   : "bg-yellow-100 text-yellow-700"
-                            }
-                          `}
-                        >
-                          {item.metode}
-                        </span>
-                      </td>
+                            }`}
+                          >
+                            {item.payment_method.toUpperCase()}
+                          </span>
+                        </td>
 
-                      <td className="px-6 py-4">
-                        {item.kasir}
-                      </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              item.payment_status === "completed"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-yellow-100 text-yellow-700"
+                            }`}
+                          >
+                            {item.payment_status === "completed"
+                              ? "Lunas"
+                              : item.payment_status}
+                          </span>
+                        </td>
 
-                      <td className="px-6 py-4 text-center">
-                        <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-medium transition">
-                          Unduh
-                        </button>
+                        <td className="px-6 py-4 text-center">
+                          <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-medium transition">
+                            Unduh
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : !loading ? (
+                    <tr>
+                      <td colSpan={8} className="text-center text-gray-400 py-16">
+                        Tidak ada riwayat transaksi
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    <tr>
+                      <td colSpan={8} className="text-center text-gray-400 py-16">
+                        Loading...
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
 
             {/* EMPTY */}
-            {transaksi.length === 0 && (
+            {!loading && transaksi.length === 0 && (
               <div className="text-center text-gray-400 py-16">
                 Tidak ada riwayat transaksi
               </div>

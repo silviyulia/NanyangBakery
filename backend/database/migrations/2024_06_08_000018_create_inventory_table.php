@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Tidak ada di database SQL, skip - Lihat 2024_06_08_000016
+        // Skip - Sudah ada di 2024_06_08_000002_create_inventory_table.php
     }
 
     /**

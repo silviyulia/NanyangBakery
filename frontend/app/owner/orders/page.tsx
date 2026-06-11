@@ -13,23 +13,22 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { ordersData } from "../../lib/orders";
 
 // 🔹 TYPE
 type Order = {
-  id: string;
-  table: string;
-  status: "proses" | "selesai" | "batal";
-  waiter: string;
-  total: number;
-  items: {
-    name: string;
-    qty: number;
+  order_id: string;
+  table_id: number;
+  status: "pending" | "confirmed" | "completed" | "cancelled";
+  waitres?: { name: string; user_id?: number };
+  total_price: number;
+  order_items?: {
+    product_id: number;
+    product?: { name: string };
+    quantity: number;
     price: number;
   }[];
-  createdAt: string;
-  startedAt?: string;
-  completedAt?: string;
+  created_at: string;
+  updated_at?: string;
 };
 
 export default function OrdersPage() {
@@ -37,6 +36,8 @@ export default function OrdersPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeFilter, setActiveFilter] = useState("semua");
   const [now, setNow] = useState<Date>(new Date());
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const menuItems = [
     { name: "Dashboard", icon: "📊", href: "/owner" },
@@ -49,6 +50,28 @@ export default function OrdersPage() {
     { name: "Karyawan", icon: "👥", href: "/owner/employees" },
   ];
 
+  // 🔹 FETCH ORDERS FROM API
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch("http://127.0.0.1:8000/api/orders");
+        if (res.ok) {
+          const data = await res.json();
+          setOrders(data);
+        }
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+    const interval = setInterval(fetchOrders, 5000); // Refresh every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   // 🔹 REAL TIME CLOCK
   useEffect(() => {
     const interval = setInterval(() => {
@@ -58,23 +81,43 @@ export default function OrdersPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const orders: Order[] = ordersData;
-
-  const filteredOrders = orders.filter(
-    (order) => activeFilter === "semua" || order.status === activeFilter,
-  );
+  const filteredOrders = orders.filter((order) => {
+    if (activeFilter === "semua") return true;
+    if (activeFilter === "pending") return order.status === "pending";
+    if (activeFilter === "confirmed") return order.status === "confirmed";
+    if (activeFilter === "completed") return order.status === "completed";
+    if (activeFilter === "cancelled") return order.status === "cancelled";
+    return true;
+  });
 
   // 🔹 STATUS STYLE
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "selesai":
+      case "completed":
         return "bg-green-100 text-green-700";
-      case "proses":
+      case "confirmed":
         return "bg-yellow-100 text-yellow-700";
-      case "batal":
+      case "pending":
+        return "bg-blue-100 text-blue-700";
+      case "cancelled":
         return "bg-red-100 text-red-700";
       default:
         return "bg-gray-100 text-gray-700";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "Selesai";
+      case "confirmed":
+        return "Proses";
+      case "pending":
+        return "Pending";
+      case "cancelled":
+        return "Batal";
+      default:
+        return status;
     }
   };
 
@@ -212,7 +255,7 @@ export default function OrdersPage() {
                     Dalam Proses
                   </p>
                   <p className="mt-2 text-2xl font-bold text-orange-600">
-                    {orders.filter((order) => order.status === "proses").length}
+                    {orders.filter((order) => order.status === "confirmed").length}
                   </p>
                 </div>
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-yellow-50 text-yellow-700 text-lg font-bold">
@@ -227,7 +270,7 @@ export default function OrdersPage() {
                     Selesai / Batal
                   </p>
                   <p className="mt-2 text-2xl font-bold text-amber-950">
-                    {orders.filter((order) => order.status !== "proses").length}
+                    {orders.filter((order) => order.status === "completed" || order.status === "cancelled").length}
                   </p>
                 </div>
                 <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-green-50 text-green-700 text-lg font-bold">
@@ -240,9 +283,10 @@ export default function OrdersPage() {
           <div className="mb-8 flex flex-wrap gap-3">
             {[
               { label: "Semua", value: "semua" },
-              { label: "Proses", value: "proses" },
-              { label: "Selesai", value: "selesai" },
-              { label: "Dibatalkan", value: "batal" },
+              { label: "Pending", value: "pending" },
+              { label: "Proses", value: "confirmed" },
+              { label: "Selesai", value: "completed" },
+              { label: "Dibatalkan", value: "cancelled" },
             ].map((filter) => (
               <button
                 key={filter.value}
@@ -264,15 +308,7 @@ export default function OrdersPage() {
                 Menampilkan Pesanan
               </h3>
               <p className="text-sm text-gray-600">
-                {activeFilter === "semua"
-                  ? "Semua pesanan ditampilkan"
-                  : `Menampilkan pesanan dengan status ${
-                      activeFilter === "proses"
-                        ? "Proses"
-                        : activeFilter === "selesai"
-                          ? "Selesai"
-                          : "Dibatalkan"
-                    }`}
+                {loading ? "Memuat..." : `${filteredOrders.length} pesanan ditemukan`}
               </p>
             </div>
             <span className="rounded-full bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-600">
@@ -282,82 +318,76 @@ export default function OrdersPage() {
 
           {/* GRID ORDERS */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredOrders.map((order) => (
-              <div
-                key={order.id}
-                className="bg-white rounded-xl shadow border overflow-hidden"
-              >
-                {/* HEADER CARD */}
-                <div className="bg-orange-50 p-4 border-b">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="bg-orange-500 text-white px-3 py-1 rounded text-sm">
-                        {order.id}
-                      </span>
-                      <h3 className="font-bold mt-2">{order.table}</h3>
+            {filteredOrders.length > 0 ? (
+              filteredOrders.map((order) => (
+                <div
+                  key={order.order_id}
+                  className="bg-white rounded-xl shadow border overflow-hidden"
+                >
+                  {/* HEADER CARD */}
+                  <div className="bg-orange-50 p-4 border-b">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="bg-orange-500 text-white px-3 py-1 rounded text-sm">
+                          Meja {order.table_id}
+                        </span>
+                        <h3 className="font-bold mt-2">Order #{order.order_id}</h3>
 
-                      {/* 🕒 WAKTU */}
-                      <div className="text-xs text-gray-600 mt-1 space-y-1">
-                        <p>Masuk: {formatTime(order.createdAt)}</p>
-
-                        {order.status === "proses" && (
-                          <p className="text-orange-600 font-medium">
-                            Durasi: {getDuration(order.startedAt)}
-                          </p>
-                        )}
-
-                        {order.status === "selesai" && (
-                          <p className="text-green-600 font-medium">
-                            Selesai: {formatTime(order.completedAt)}
-                          </p>
-                        )}
+                        {/* 🕒 WAKTU */}
+                        <div className="text-xs text-gray-600 mt-1 space-y-1">
+                          <p>Masuk: {formatTime(order.created_at)}</p>
+                        </div>
                       </div>
-                    </div>
 
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(
-                        order.status,
-                      )}`}
-                    >
-                      {getStatusLabel(order.status)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* BODY */}
-                <div className="p-4 space-y-2">
-                  {order.items.map((item, i) => (
-                    <div key={i} className="flex justify-between text-sm">
-                      <span>
-                        {item.qty}x {item.name}
-                      </span>
-                      <span className="text-orange-600 font-semibold">
-                        Rp {item.price.toLocaleString()}
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
+                        {getStatusLabel(order.status)}
                       </span>
                     </div>
-                  ))}
-
-                  <div className="pt-3 border-t flex justify-between font-bold">
-                    <span>Total</span>
-                    <span className="text-orange-600">
-                      Rp {order.total.toLocaleString()}
-                    </span>
                   </div>
 
-                  <p className="text-xs text-gray-500 pt-2">
-                    Waiter: {order.waiter}
-                  </p>
+                  {/* ITEMS */}
+                  <div className="p-4 border-b max-h-40 overflow-y-auto">
+                    {order.order_items && order.order_items.length > 0 ? (
+                      <ul className="space-y-2 text-sm">
+                        {order.order_items.map((item, idx) => (
+                          <li
+                            key={idx}
+                            className="flex justify-between"
+                          >
+                            <span className="font-medium">
+                              {item.quantity}x {item.product?.name || "Produk"}
+                            </span>
+                            <span className="text-gray-600">
+                              Rp {item.price.toLocaleString("id-ID")}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-gray-500">Tidak ada item</p>
+                    )}
+                  </div>
+
+                  {/* FOOTER */}
+                  <div className="p-4 bg-gray-50">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="font-semibold text-gray-700">Total:</span>
+                      <span className="font-bold text-lg text-orange-600">
+                        Rp {order.total_price.toLocaleString("id-ID")}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-600 mb-3">
+                      <p>Waitres: {order.waitres?.name || "N/A"}</p>
+                    </div>
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-8 text-gray-500">
+                {loading ? "Memuat pesanan..." : "Tidak ada pesanan untuk filter ini"}
               </div>
-            ))}
+            )}
           </div>
-
-          {/* EMPTY */}
-          {filteredOrders.length === 0 && (
-            <div className="text-center text-gray-400 mt-20">
-              Tidak ada pesanan
-            </div>
-          )}
         </main>
       </div>
     </div>

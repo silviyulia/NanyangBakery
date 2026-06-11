@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Inventory extends Model
 {
@@ -12,33 +13,63 @@ class Inventory extends Model
     protected $table = 'inventory';
     protected $primaryKey = 'inventory_id';
     public $incrementing = true;
-    protected $keyType = 'int';
+    protected $keyType = 'bigint';
 
     protected $fillable = [
-        'nama',
-        'stok',
-        'satuan',
-        'min_stok',
+        'product_id',
+        'stock_quantity',
+        'minimum_threshold',
+        'maximum_threshold',
         'status',
     ];
 
     protected $casts = [
-        'stok' => 'decimal:2',
-        'min_stok' => 'decimal:2',
+        'stock_quantity' => 'integer',
+        'minimum_threshold' => 'integer',
+        'maximum_threshold' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
 
     /**
-     * Get stock status based on current and minimum stock.
+     * Get the product for this inventory.
      */
-    public function getStatusAttribute()
+    public function product(): BelongsTo
     {
-        if ($this->attributes['stok'] <= $this->attributes['min_stok'] * 0.5) {
-            return 'kritis';
-        } elseif ($this->attributes['stok'] < $this->attributes['min_stok']) {
-            return 'rendah';
+        return $this->belongsTo(Product::class, 'product_id', 'product_id');
+    }
+
+    /**
+     * Check if stock is low.
+     */
+    public function isLowStock(): bool
+    {
+        return $this->stock_quantity <= $this->minimum_threshold;
+    }
+
+    /**
+     * Check if stock is out.
+     */
+    public function isOutOfStock(): bool
+    {
+        return $this->stock_quantity <= 0;
+    }
+
+    /**
+     * Update stock quantity and status.
+     */
+    public function updateStock(int $quantity): void
+    {
+        $this->stock_quantity += $quantity;
+        
+        if ($this->stock_quantity <= 0) {
+            $this->status = 'out_of_stock';
+        } elseif ($this->stock_quantity <= $this->minimum_threshold) {
+            $this->status = 'low_stock';
+        } else {
+            $this->status = 'available';
         }
-        return 'normal';
+        
+        $this->save();
     }
 }

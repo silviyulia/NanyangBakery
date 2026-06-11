@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Product extends Model
 {
@@ -35,7 +38,7 @@ class Product extends Model
      *
      * @var string
      */
-    protected $keyType = 'int';
+    protected $keyType = 'bigint';
 
     /**
      * The attributes that are mass assignable.
@@ -64,7 +67,7 @@ class Product extends Model
     /**
      * Get the category that owns the product.
      */
-    public function category()
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class, 'category_id', 'category_id');
     }
@@ -72,7 +75,7 @@ class Product extends Model
     /**
      * Get the productions for this product.
      */
-    public function productions()
+    public function productions(): HasMany
     {
         return $this->hasMany(Production::class, 'product_id', 'product_id');
     }
@@ -80,8 +83,49 @@ class Product extends Model
     /**
      * Get the recipes for this product.
      */
-    public function recipes()
+    public function recipes(): HasMany
     {
         return $this->hasMany(Recipe::class, 'product_id', 'product_id');
+    }
+
+    /**
+     * Get the inventory for this product.
+     */
+    public function inventory(): HasOne
+    {
+        return $this->hasOne(Inventory::class, 'product_id', 'product_id');
+    }
+
+    /**
+     * Get the order items for this product.
+     */
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class, 'product_id', 'product_id');
+    }
+
+    /**
+     * Check if product is available for sale.
+     */
+    public function isAvailable(): bool
+    {
+        if ($this->status !== 'active') {
+            return false;
+        }
+
+        $inventory = $this->inventory;
+        if ($inventory && ($inventory->stock_quantity <= 0 || $inventory->status === 'out_of_stock')) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Get available stock quantity.
+     */
+    public function getAvailableStock(): int
+    {
+        return $this->inventory?->stock_quantity ?? 0;
     }
 }
