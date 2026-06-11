@@ -68,7 +68,12 @@ export default function ProductionPage() {
       href: "/owner/employees",
     },
   ];
+const [today, setToday] = useState("");
 
+  useEffect(() => {
+    setToday(new Date().toLocaleDateString("id-ID"));
+  }, []);
+  
   useEffect(() => {
     fetch("http://127.0.0.1:8000/api/products")
       .then((res) => res.json())
@@ -281,7 +286,7 @@ export default function ProductionPage() {
                   </p>
 
                   <h2 className="text-xl font-bold text-amber-950">
-                    {new Date().toLocaleDateString()}
+                    {today}
                   </h2>
                 </div>
 

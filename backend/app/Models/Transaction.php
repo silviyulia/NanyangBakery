@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Transaction extends Model
 {
@@ -12,21 +14,25 @@ class Transaction extends Model
     protected $table = 'transactions';
     protected $primaryKey = 'transaction_id';
     public $incrementing = true;
-    protected $keyType = 'int';
+    protected $keyType = 'bigint';
 
     protected $fillable = [
         'order_id',
-        'table_name',
-        'items_count',
-        'total',
+        'kasir_id',
+        'session_id',
+        'total_amount',
         'payment_method',
-        'cashier_id',
-        'transaction_date',
+        'payment_status',
+        'amount_paid',
+        'change_amount',
+        'reference_number',
+        'notes',
     ];
 
     protected $casts = [
-        'total' => 'decimal:2',
-        'transaction_date' => 'datetime',
+        'total_amount' => 'decimal:2',
+        'amount_paid' => 'decimal:2',
+        'change_amount' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -34,16 +40,46 @@ class Transaction extends Model
     /**
      * Get the order for this transaction.
      */
-    public function order()
+    public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class, 'order_id', 'order_id');
     }
 
     /**
-     * Get the cashier who processed this transaction.
+     * Get the kasir who processed this transaction.
      */
-    public function cashier()
+    public function kasir(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'cashier_id', 'id');
+        return $this->belongsTo(User::class, 'kasir_id', 'user_id');
+    }
+
+    /**
+     * Get the cashier session for this transaction.
+     */
+    public function session(): BelongsTo
+    {
+        return $this->belongsTo(CashierSession::class, 'session_id', 'session_id');
+    }
+
+    /**
+     * Get the receipt for this transaction.
+     */
+    public function receipt(): HasOne
+    {
+        return $this->hasOne(Receipt::class, 'transaction_id', 'transaction_id');
+    }
+
+    /**
+     * Calculate change amount.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function ($model) {
+            if ($model->payment_method === 'cash') {
+                $model->change_amount = $model->amount_paid - $model->total_amount;
+            } else {
+                $model->change_amount = 0;
+            }
+        });
     }
 }

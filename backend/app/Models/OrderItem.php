@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderItem extends Model
 {
@@ -12,7 +13,7 @@ class OrderItem extends Model
     protected $table = 'order_items';
     protected $primaryKey = 'order_item_id';
     public $incrementing = true;
-    protected $keyType = 'int';
+    protected $keyType = 'bigint';
 
     protected $fillable = [
         'order_id',
@@ -20,9 +21,11 @@ class OrderItem extends Model
         'quantity',
         'price',
         'subtotal',
+        'status',
     ];
 
     protected $casts = [
+        'quantity' => 'integer',
         'price' => 'decimal:2',
         'subtotal' => 'decimal:2',
         'created_at' => 'datetime',
@@ -30,18 +33,28 @@ class OrderItem extends Model
     ];
 
     /**
-     * Get the order this item belongs to.
+     * Get the order that this item belongs to.
      */
-    public function order()
+    public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class, 'order_id', 'order_id');
     }
 
     /**
-     * Get the product for this order item.
+     * Get the product for this item.
      */
-    public function product()
+    public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'product_id', 'product_id');
+    }
+
+    /**
+     * Calculate subtotal before saving.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function ($model) {
+            $model->subtotal = $model->quantity * $model->price;
+        });
     }
 }

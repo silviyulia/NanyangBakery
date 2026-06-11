@@ -6,18 +6,24 @@ import { useRouter, useSearchParams } from "next/navigation";
 import MenuCard, { MenuItem } from "@/app/waitres/MenuCard";
 import Sidebar from "../components/Sidebar";
 
+interface Product {
+  product_id: number;
+  name: string;
+  price: number;
+  image?: string;
+  category_id?: number;
+  status?: string;
+}
+
 export default function transaksiPage() {
-  const [selectedCategory, setSelectedCategory] =
-    useState("Semua");
-
-  const [incomingTable, setIncomingTable] =
-    useState<string | null>(null);
-
+  const [selectedCategory, setSelectedCategory] = useState("Semua");
+  const [incomingTable, setIncomingTable] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
-
   const [search, setSearch] = useState("");
-
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState(["Semua"]);
+  const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<
     Array<{
       id: number;
@@ -31,8 +37,7 @@ export default function transaksiPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const storedOrder =
-      window.localStorage.getItem("waitresOrder");
+    const storedOrder = window.localStorage.getItem("waitresOrder");
 
     if (!storedOrder) return;
 
@@ -44,16 +49,11 @@ export default function transaksiPage() {
         setCart(parsed.items);
       }
     } catch (error) {
-      console.error(
-        "Gagal memuat pesanan waitres:",
-        error
-      );
+      console.error("Gagal memuat pesanan waitres:", error);
     }
 
-    // also check for incoming table from query param
     try {
       const tableFromQuery = searchParams?.get("table");
-
       if (tableFromQuery) {
         setIncomingTable(decodeURIComponent(tableFromQuery));
       }
@@ -62,93 +62,57 @@ export default function transaksiPage() {
     }
   }, []);
 
-  // ================= MENU DATA =================
-  const menu: MenuItem[] = [
-    {
-      id: 1,
-      name: "Croissant",
-      category: "Roti & Pastry",
-      price: 30000,
-      image:
-        "https://static01.nyt.com/images/2021/04/07/dining/06croissantsrex1/merlin_184841898_ccc8fb62-ee41-44e8-9ddf-b95b198b88db-jumbo.jpg",
-    },
-    {
-      id: 2,
-      name: "Chocolate Cake",
-      category: "Kue & Cake",
-      price: 45000,
-      image:
-        "https://lilluna.com/wp-content/uploads/2019/01/Chocolate-Cake103.jpg",
-    },
-    {
-      id: 3,
-      name: "Espresso",
-      category: "Minuman",
-      price: 20000,
-      image:
-        "https://img.magnific.com/premium-photo/high-resolution-image-freshly-brewed-cup-espresso-with-creamy-crema-layer_1264082-26795.jpg?w=996",
-    },
-    {
-      id: 4,
-      name: "Baguette",
-      category: "Roti & Pastry",
-      price: 28000,
-      image:
-        "https://latelierdespains.fr/wp-content/uploads/2023/11/baguette-courte_Atelier-des-pains_1.jpg",
-    },
-    {
-      id: 5,
-      name: "Red Velvet",
-      category: "Kue & Cake",
-      price: 40000,
-      image:
-        "https://www.mommyplates.com/wp-content/uploads/2025/05/Red-Velvet-Cake.webp",
-    },
-    {
-      id: 6,
-      name: "Cappuccino",
-      category: "Minuman",
-      price: 25000,
-      image:
-        "https://tse4.mm.bing.net/th/id/OIP.sORUCLQs6IFavbrcEWRPgAHaE8?pid=Api&P=0&h=180",
-    },
-    {
-      id: 7,
-      name: "Danish Pastry",
-      category: "Roti & Pastry",
-      price: 32000,
-      image:
-        "https://tse1.mm.bing.net/th/id/OIP.tPkgAvgXjtG-R1fQNlm8ywHaEK?pid=Api&P=0&h=180",
-    },
-    {
-      id: 8,
-      name: "Brownies",
-      category: "Kue & Cake",
-      price: 35000,
-      image:
-        "https://www.glorioustreats.com/wp-content/uploads/2022/09/cheesecake-brownie-recipe-square.jpeg",
-    },
-  ];
+  // ================= FETCH PRODUCTS & CATEGORIES =================
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
 
-  const categories = [
-    "Semua",
-    "Roti & Pastry",
-    "Kue & Cake",
-    "Minuman",
-  ];
+        // Fetch products
+        const productsRes = await fetch("http://127.0.0.1:8000/api/products");
+        if (productsRes.ok) {
+          const productsData = await productsRes.json();
+          setProducts(productsData);
+        }
+
+        // Fetch categories
+        const categoriesRes = await fetch("http://127.0.0.1:8000/api/categories");
+        if (categoriesRes.ok) {
+          const categoriesData = await categoriesRes.json();
+          const categoryNames = ["Semua", ...categoriesData.map((cat: any) => cat.name || `Kategori ${cat.id}`)];
+          setCategories(categoryNames);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const getProductCategoryName = (categoryId: number | undefined) => {
+    if (!categoryId) return "Lainnya";
+    if (categoryId === 1) return "Roti & Pastry";
+    if (categoryId === 2) return "Kue & Cake";
+    if (categoryId === 3) return "Minuman";
+    return `Kategori ${categoryId}`;
+  };
 
   // ================= FILTER =================
-  const filteredMenu = menu.filter((item) => {
-    const matchCategory =
-      selectedCategory === "Semua" ||
-      item.category === selectedCategory;
-
-    const matchSearch = item.name
-      .toLowerCase()
-      .includes(search.toLowerCase());
-
-    return matchCategory && matchSearch;
-  });
+  const filteredMenu = products.filter((item) => {
+    const categoryName = getProductCategoryName(item.category_id);
+    const matchCategory = selectedCategory === "Semua" || categoryName === selectedCategory;
+    const matchSearch = item.name.toLowerCase().includes(search.toLowerCase());
+    return matchCategory && matchSearch && item.status === "active";
+  }).map(product => ({
+    id: product.product_id,
+    name: product.name,
+    category: getProductCategoryName(product.category_id),
+    price: product.price,
+    image: product.image || "https://via.placeholder.com/300",
+  }));
 
   // ================= CART =================
   const addToCart = (item: MenuItem) => {

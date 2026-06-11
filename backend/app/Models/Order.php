@@ -4,53 +4,105 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
     use HasFactory;
 
     protected $table = 'orders';
+
+    // Jika primary key bukan "id"
+    protected $primaryKey = 'order_id';
+
     public $incrementing = true;
+
     protected $keyType = 'int';
 
     protected $fillable = [
-        'table_name',
+        'table_id',
+        'waitres_id',
         'status',
-        'waiter_id',
-        'total',
-        'started_at',
-        'completed_at',
+        'total_price',
+        'notes',
     ];
 
     protected $casts = [
-        'total' => 'decimal:2',
+        'total_price' => 'decimal:2',
         'created_at' => 'datetime',
-        'started_at' => 'datetime',
-        'completed_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
 
     /**
-     * Get the order items for this order.
+     * Relasi ke meja
      */
-    public function items()
+    public function table(): BelongsTo
     {
-        return $this->hasMany(OrderItem::class, 'order_id', 'order_id');
+        return $this->belongsTo(
+            Table::class,
+            'table_id',
+            'table_id'
+        );
     }
 
     /**
-     * Get the waiter who handled this order.
+     * Relasi ke waiter/waitress
      */
-    public function waiter()
+    public function waitres(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'waiter_id', 'id');
+        return $this->belongsTo(
+            User::class,
+            'waitres_id',
+            'user_id'
+        );
     }
 
     /**
-     * Get the transaction for this order.
+     * Relasi item order
      */
-    public function transaction()
+    public function items(): HasMany
     {
-        return $this->hasOne(Transaction::class, 'order_id', 'order_id');
+        return $this->hasMany(
+            OrderItem::class,
+            'order_id',
+            'order_id'
+        );
+    }
+
+    /**
+     * Relasi transaksi
+     */
+    public function transaction(): HasOne
+    {
+        return $this->hasOne(
+            Transaction::class,
+            'order_id',
+            'order_id'
+        );
+    }
+
+    /**
+     * Hitung total order
+     */
+    public function calculateTotal(): void
+    {
+        $this->loadMissing('items');
+
+        $this->total_price = $this->items->sum(function ($item) {
+            return $item->subtotal ?? ($item->quantity * $item->price);
+        });
+
+        $this->save();
+    }
+
+    /**
+     * Cek apakah order bisa dikonfirmasi
+     */
+    public function canBeConfirmed(): bool
+    {
+        return $this->status === 'pending'
+            && $this->items()->exists();
     }
 }

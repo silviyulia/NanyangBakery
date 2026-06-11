@@ -11,7 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Tidak ada di database SQL, skip
+        Schema::create('order_items', function (Blueprint $table) {
+            $table->id('order_item_id');
+            $table->unsignedBigInteger('order_id');
+            $table->unsignedBigInteger('product_id');
+            $table->integer('quantity');
+            $table->decimal('price', 12, 2);
+            $table->decimal('subtotal', 12, 2);
+            $table->enum('status', ['pending', 'confirmed', 'cancelled'])->default('pending');
+            $table->timestamps();
+            
+            // Foreign keys
+            $table->foreign('order_id')->references('order_id')->on('orders')->onDelete('cascade');
+            $table->foreign('product_id')->references('product_id')->on('products')->onDelete('restrict');
+        });
     }
 
     /**
@@ -19,6 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Skip
+        Schema::dropIfExists('order_items');
     }
 };

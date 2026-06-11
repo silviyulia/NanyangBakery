@@ -7,16 +7,12 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * SKIPPED: Tables table created by 2024_06_08_000002_5_create_tables_table_priority
+     * This migration left for reference only.
      */
     public function up(): void
     {
-        Schema::create('tables', function (Blueprint $table) {
-            $table->id('table_id');
-            $table->string('table_number', 20);
-            $table->integer('capacity');
-            $table->enum('status', ['available', 'occupied', 'reserved'])->default('available');
-        });
+        // Table already created in 000002_5 with proper ordering
     }
 
     /**
@@ -24,6 +20,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('tables');
+        // Do nothing - table managed by priority migration
     }
 };
