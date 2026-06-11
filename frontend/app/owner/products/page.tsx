@@ -13,6 +13,10 @@ interface Product {
   image?: string;
   status: string;
 }
+interface Category {
+  category_id: number;
+  name: string;
+}
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -61,8 +65,25 @@ export default function ProductsPage() {
     }
   };
 
+  const loadCategories = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/categories");
+
+      if (!res.ok) {
+        throw new Error("Gagal mengambil kategori");
+      }
+
+      const data = await res.json();
+
+      setCategories(data);
+    } catch (error) {
+      console.error("Load Category Error:", error);
+    }
+  };
+
   useEffect(() => {
     loadProducts();
+    loadCategories();
   }, []);
 
   const handleAddProduct = async () => {
@@ -174,42 +195,27 @@ export default function ProductsPage() {
     }
   };
 
-const [filterSearch, setFilterSearch] = useState("");
-const [filterCategory, setFilterCategory] = useState("Semua");
-const categories = [
-  "Semua",
-  ...Array.from(
-    new Set(products.map((p) => p.category_id))
-  ).map((id) => {
-    if (id === 1) return "Roti&Pastry";
-    if (id === 2) return "Kue&Cake";
-    if (id === 3) return "Minuman";
-    return `Kategori ${id}`;
-  }),
-];
+  const [filterSearch, setFilterSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState("Semua");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const categoryTabs = ["Semua", ...categories.map((c) => c.name)];
+  const getCategoryName = (categoryId: number) => {
+  const category = categories.find(
+    (c) => c.category_id === categoryId
+  );
 
+  return category?.name || "Tidak diketahui";
+};
   // FILTER LOGIC
   const filteredProducts = products.filter((product) => {
-
   const matchSearch = product.name
     .toLowerCase()
     .includes(filterSearch.toLowerCase());
-
-
-  let categoryName = "Kategori " + product.category_id;
-
-  if(product.category_id === 1) categoryName="Roti&Pastry";
-  if(product.category_id === 2) categoryName="Kue&Cake";
-  if(product.category_id === 3) categoryName="Minuman";
-
-
+  const categoryName = getCategoryName(product.category_id);
   const matchCategory =
-    filterCategory === "Semua" ||
-    categoryName === filterCategory;
-
-
-  return matchSearch && matchCategory;
-});
+    filterCategory === "Semua" || categoryName === filterCategory;
+    return matchSearch && matchCategory;
+  });
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -328,9 +334,15 @@ const categories = [
                   className="w-full border px-3 py-2 rounded-lg"
                 >
                   <option value="">Pilih Kategori</option>
-                  <option value="1">Roti & Pastry</option>
-                  <option value="2">Kue & Cake</option>
-                  <option value="3">Minuman</option>
+
+                  {categories.map((category) => (
+                    <option
+                      key={category.category_id}
+                      value={category.category_id}
+                    >
+                      {category.name}
+                    </option>
+                  ))}
                 </select>
 
                 {/* Harga */}
@@ -450,37 +462,35 @@ const categories = [
 
           {/* SEARCH + FILTER */}
           <div className="bg-white p-4 rounded-xl flex gap-3">
-
-          <input
-          type="text"
-          placeholder="Cari produk..."
-          value={filterSearch}
-          onChange={(e)=>setFilterSearch(e.target.value)}
-          className="w-full border px-3 py-2 rounded-lg"
-          />
-        </div>
+            <input
+              type="text"
+              placeholder="Cari produk..."
+              value={filterSearch}
+              onChange={(e) => setFilterSearch(e.target.value)}
+              className="w-full border px-3 py-2 rounded-lg"
+            />
+          </div>
 
           {/* TAB CATEGORY */}
           <div className="flex gap-3 mb-6">
-          {categories.map((cat,i)=>(
-
-            <button
-            key={i}
-            onClick={()=>setFilterCategory(cat)}
-            className={`px-4 py-2 rounded-full text-sm ${
-            filterCategory===cat
-            ? "bg-orange-500 text-white"
-            : "bg-gray-100"
-            }`}
-            >
-            {cat}
-            </button>
+            {categoryTabs.map((cat, i) => (
+              <button
+                key={i}
+                onClick={() => setFilterCategory(cat)}
+                className={`px-4 py-2 rounded-full text-sm ${
+                  filterCategory === cat
+                    ? "bg-orange-500 text-white"
+                    : "bg-gray-100"
+                }`}
+              >
+                {cat}
+              </button>
             ))}
-            </div>
+          </div>
 
           {/* GRID */}
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {filteredProducts.map((p)=>(
+            {filteredProducts.map((p) => (
               <div
                 key={p.product_id}
                 className="bg-white p-4 rounded-xl border shadow"
@@ -497,11 +507,15 @@ const categories = [
                   />
                 </div>
 
-                <h3 className="font-bold mt-2">{p.name}</h3>
+                  <h3 className="font-bold mt-2">{p.name}</h3>
 
-                <p className="text-orange-500 font-bold">
-                  Rp {Number(p.price).toLocaleString("id-ID")}
-                </p>
+                  <p className="text-sm text-gray-500">
+                    {getCategoryName(p.category_id)}
+                  </p>
+
+                  <p className="text-orange-500 font-bold">
+                    Rp {Number(p.price).toLocaleString("id-ID")}
+                  </p>
 
                 <span
                   className={`text-xs px-2 py-1 rounded mt-2 inline-block ${

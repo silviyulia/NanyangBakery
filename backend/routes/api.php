@@ -15,3 +15,13 @@ Route::delete('/products/{id}', [ProductController::class, 'destroy']);
 
 //use App\Http\Controllers\Api\ProductionController;
 //Route::post('/productions', [ProductionController::class, 'store']);
+
+use App\Http\Controllers\Api\DashboardController;
+Route::get('/dashboard', [DashboardController::class, 'index']);
+Route::get('/sales-chart', [DashboardController::class, 'salesChart']);
+
+use App\Http\Controllers\Api\CategoryController;
+Route::get('/categories', [CategoryController::class, 'index']);
+
+use App\Http\Controllers\Api\OrderController;
+Route::get('/orders', [OrderController::class, 'index']);

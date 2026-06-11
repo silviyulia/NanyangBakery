@@ -13,7 +13,6 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { ordersData } from "../../lib/orders";
 
 // 🔹 TYPE
 type Order = {
@@ -36,8 +35,9 @@ export default function OrdersPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeFilter, setActiveFilter] = useState("semua");
-  const [now, setNow] = useState<Date>(new Date());
-
+  const formatRupiah = (value: number) => {
+    return new Intl.NumberFormat("id-ID").format(value);
+  };
   const menuItems = [
     { name: "Dashboard", icon: "📊", href: "/owner" },
     { name: "Pesanan Real-time", icon: "🛒", href: "/owner/orders" },
@@ -50,7 +50,12 @@ export default function OrdersPage() {
   ];
 
   // 🔹 REAL TIME CLOCK
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [now, setNow] = useState<Date | null>(null);
+
   useEffect(() => {
+    setNow(new Date());
+
     const interval = setInterval(() => {
       setNow(new Date());
     }, 1000);
@@ -58,7 +63,12 @@ export default function OrdersPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const orders: Order[] = ordersData;
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/orders")
+      .then((res) => res.json())
+      .then((data) => setOrders(data))
+      .catch((err) => console.error(err));
+  }, []);
 
   const filteredOrders = orders.filter(
     (order) => activeFilter === "semua" || order.status === activeFilter,
@@ -102,7 +112,7 @@ export default function OrdersPage() {
 
   // 🔹 DURASI MEJA DIPAKAI (REAL TIME)
   const getDuration = (start?: string) => {
-    if (!start) return "-";
+    if (!start || !now) return "-";
 
     const startTime = new Date(start).getTime();
     const diff = Math.floor((now.getTime() - startTime) / 1000);
@@ -332,7 +342,7 @@ export default function OrdersPage() {
                         {item.qty}x {item.name}
                       </span>
                       <span className="text-orange-600 font-semibold">
-                        Rp {item.price.toLocaleString()}
+                        Rp {item.price.toLocaleString("id-ID")}                      
                       </span>
                     </div>
                   ))}
@@ -340,7 +350,7 @@ export default function OrdersPage() {
                   <div className="pt-3 border-t flex justify-between font-bold">
                     <span>Total</span>
                     <span className="text-orange-600">
-                      Rp {order.total.toLocaleString()}
+                     Rp {order.total.toLocaleString("id-ID")}
                     </span>
                   </div>
 
