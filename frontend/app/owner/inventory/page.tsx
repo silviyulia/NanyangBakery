@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Menu, User, LogOut, X } from "lucide-react";
 import Link from "next/link";
@@ -12,7 +12,7 @@ export default function InventoryPage() {
   const [showTambahModal, setShowTambahModal] = useState(false);
   const [showInputModal, setShowInputModal] = useState(false);
 
-  const [selectedItem, setSelectedItem] = useState(null);
+const [selectedItem, setSelectedItem] = useState<any>(null);
   const [inputStok, setInputStok] = useState("");
 
   // form tambah bahan
@@ -23,41 +23,79 @@ export default function InventoryPage() {
     min: "",
   });
 
-   const menuItems = [
+  const menuItems = [
     { name: "Dashboard", icon: "📊", href: "/owner" },
     { name: "Pesanan Real-time", icon: "🛒", href: "/owner/orders" },
     { name: "Laporan", icon: "📄", href: "/owner/reports" },
     { name: "Produk & Menu", icon: "🍪", href: "/owner/products" },
-    {name: "Produksi harian", icon: "🏭", href:"/owner/productions"},
-    { name: "Stok Bahan", icon: "📦", href: "/owner/inventory" },
+    { name: "Produksi harian", icon: "🏭", href: "/owner/productions" },
+    { name: "Stok Bahan Baku", icon: "📦", href: "/owner/inventory" },
     { name: "Resep Produk", icon: "👨‍🍳", href: "/owner/recipes" },
     { name: "Karyawan", icon: "👥", href: "/owner/employees" },
   ];
 
   // DATA
-  const stockData = [
-    { nama: "Tepung terigu", stok: 2.5, satuan: "Kg", min: 5 },
-    { nama: "Gula pasir", stok: 2.5, satuan: "Kg", min: 5 },
-    { nama: "Margarin", stok: 2.5, satuan: "Kg", min: 5 },
-    { nama: "Ragi Instan", stok: 2.5, satuan: "Kg", min: 2 },
-    { nama: "Telur", stok: 3, satuan: "Kg", min: 10 },
-    { nama: "Susu cair", stok: 1.5, satuan: "Liter", min: 5 },
-    { nama: "Garam", stok: 5, satuan: "Kg", min: 3 },
-    { nama: "Coklat bubuk", stok: 8, satuan: "Kg", min: 5 },
-    { nama: "Baking soda", stok: 7, satuan: "Kg", min: 3 },
-  ];
+  const [stockData, setStockData] = useState<any[]>([]);
+  const loadInventory = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/inventory");
 
-  // STATUS LOGIC
-  const getStatus = (stok: number, min: number) => {
-    if (stok <= min * 0.5) return "kritis";
-    if (stok < min) return "rendah";
-    return "normal";
+      const data = await res.json();
+
+      setStockData(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  useEffect(() => {
+    loadInventory();
+  }, []);
+
+  const handleAddIngredient = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/inventory", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ingredient_name: form.nama,
+          qty: Number(form.stok),
+          unit: form.satuan,
+          minimum_stock: Number(form.min),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message);
+
+      await loadInventory();
+      setForm({
+        nama: "",
+        stok: "",
+        satuan: "Kg",
+        min: "",
+      });
+      setShowTambahModal(false);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
+  // STATUS LOGIC
+const getStatus = (qty: number, minimum_stock: number) => {
+  if (qty <= minimum_stock ) return "kritis";
+  if (qty <= minimum_stock * 2) return "rendah";
+  return "normal";
+};
+
+  const lowStockItems = stockData.filter(
+    (item) => Number(item.qty) <= Number(item.minimum_stock),
+  );
   // FILTER
   const filteredData = stockData.filter((item) => {
-    const status = getStatus(item.stok, item.min);
-
+    const status = getStatus(Number(item.qty), Number(item.minimum_stock));
     if (activeTab === "Semua") return true;
     if (activeTab === "Stok normal") return status === "normal";
     if (activeTab === "Stok rendah") return status === "rendah";
@@ -65,6 +103,37 @@ export default function InventoryPage() {
 
     return true;
   });
+
+const handleInputStock = async () => {
+  try {
+    const res = await fetch(
+      `http://127.0.0.1:8000/api/inventory/${selectedItem.ingredient_id}/stock`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          qty: Number(inputStok),
+        }),
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message);
+    }
+
+    await loadInventory();
+
+    setShowInputModal(false);
+    setInputStok("");
+    setSelectedItem(null);
+  } catch (error) {
+    console.error(error);
+  }
+};
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -113,6 +182,45 @@ export default function InventoryPage() {
         </div>
       </aside>
 
+{showInputModal && selectedItem && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div
+      className="absolute inset-0 bg-black/40"
+      onClick={() => setShowInputModal(false)}
+    />
+
+    <div className="relative bg-white p-6 rounded-xl shadow-lg w-full max-w-md z-10">
+      <h3 className="text-lg font-bold mb-4">
+        Input Stok - {selectedItem.ingredient_name}
+      </h3>
+
+      <input
+        type="number"
+        placeholder="Jumlah stok masuk"
+        value={inputStok}
+        onChange={(e) => setInputStok(e.target.value)}
+        className="w-full border rounded-lg px-3 py-2"
+      />
+
+      <div className="flex justify-end gap-2 mt-4">
+        <button
+          onClick={() => setShowInputModal(false)}
+          className="px-4 py-2 border rounded-lg"
+        >
+          Batal
+        </button>
+
+        <button
+          onClick={handleInputStock}
+          className="px-4 py-2 bg-orange-500 text-white rounded-lg"
+        >
+          Simpan
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
       {/* MAIN */}
       <div className="flex-1 flex flex-col">
         {/* HEADER*/}
@@ -125,7 +233,7 @@ export default function InventoryPage() {
           </div>
           <div className="flex items-center gap-4">
             <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
-              🔔 Notifikasi (3)
+              🔔 Notifikasi ({lowStockItems.length})
             </button>
             <div className="flex items-center gap-2 bg-amber-500 bg-opacity-20 px-4 py-2 rounded-lg">
               <User size={20} />
@@ -142,81 +250,78 @@ export default function InventoryPage() {
           {/* TITLE */}
           <div className="flex justify-between">
             <h2 className="text-2xl font-bold">Manajemen stok bahan baku</h2>
-            <button onClick={() => setShowTambahModal(true)}
+            <button
+              onClick={() => setShowTambahModal(true)}
               className="bg-orange-500 text-white px-4 py-2 rounded-lg"
             >
               + Tambah Stok
             </button>
           </div>
-{showTambahModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {showTambahModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div
+                className="absolute inset-0 bg-black/40"
+                onClick={() => setShowTambahModal(false)}
+              ></div>
 
-    <div
-      className="absolute inset-0 bg-black/40"
-      onClick={() => setShowTambahModal(false)}
-    ></div>
+              <div className="relative bg-white w-full max-w-md rounded-2xl shadow-lg p-6 z-10">
+                <h3 className="text-lg font-bold mb-4">Tambah Bahan</h3>
 
-    <div className="relative bg-white w-full max-w-md rounded-2xl shadow-lg p-6 z-10">
+                <div className="space-y-3">
+                  <input
+                    placeholder="Nama bahan"
+                    value={form.nama}
+                    onChange={(e) => setForm({ ...form, nama: e.target.value })}
+                    className="w-full border px-3 py-2 rounded-lg"
+                  />
 
-      <h3 className="text-lg font-bold mb-4">Tambah Bahan</h3>
+                  <input
+                    type="number"
+                    placeholder="jumlah stok"
+                    value={form.stok}
+                    onChange={(e) => setForm({ ...form, stok: e.target.value })}
+                    className="w-full border px-3 py-2 rounded-lg"
+                  />
 
-      <div className="space-y-3">
-        <input
-          placeholder="Nama bahan"
-          value={form.nama}
-          onChange={(e) => setForm({ ...form, nama: e.target.value })}
-          className="w-full border px-3 py-2 rounded-lg"
-        />
+                  <select
+                    value={form.satuan}
+                    onChange={(e) =>
+                      setForm({ ...form, satuan: e.target.value })
+                    }
+                    className="w-full border px-3 py-2 rounded-lg"
+                  >
+                    <option>Kg</option>
+                    <option>Liter</option>
+                    <option>Gram</option>
+                  </select>
 
-        <input
-          type="number"
-          placeholder="jumlah stok"
-          value={form.stok}
-          onChange={(e) => setForm({ ...form, stok: e.target.value })}
-          className="w-full border px-3 py-2 rounded-lg"
-        />
+                  <input
+                    type="number"
+                    placeholder="Batas minimum"
+                    value={form.min}
+                    onChange={(e) => setForm({ ...form, min: e.target.value })}
+                    className="w-full border px-3 py-2 rounded-lg"
+                  />
+                </div>
 
-        <select
-          value={form.satuan}
-          onChange={(e) => setForm({ ...form, satuan: e.target.value })}
-          className="w-full border px-3 py-2 rounded-lg"
-        >
-          <option>Kg</option>
-          <option>Liter</option>
-          <option>Gram</option>
-        </select>
+                <div className="flex justify-end gap-3 mt-5">
+                  <button
+                    onClick={() => setShowTambahModal(false)}
+                    className="px-4 py-2 border rounded-lg"
+                  >
+                    Batal
+                  </button>
 
-        {/* <input
-          type="number"
-          placeholder="Batas minimum"
-          value={form.min}
-          onChange={(e) => setForm({ ...form, min: e.target.value })}
-          className="w-full border px-3 py-2 rounded-lg"
-        /> */}
-      </div>
-
-      <div className="flex justify-end gap-3 mt-5">
-        <button
-          onClick={() => setShowTambahModal(false)}
-          className="px-4 py-2 border rounded-lg"
-        >
-          Batal
-        </button>
-
-        <button
-          onClick={() => {
-            // nanti bisa connect ke state/database
-            setShowTambahModal(false);
-          }}
-          className="bg-orange-500 text-white px-4 py-2 rounded-lg"
-        >
-          Simpan
-        </button>
-      </div>
-
-    </div>
-  </div>
-)}
+                  <button
+                    onClick={handleAddIngredient}
+                    className="bg-orange-500 text-white px-4 py-2 rounded-lg"
+                  >
+                    Simpan
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           {/* TAB */}
           <div className="flex gap-3">
             {["Semua", "Stok normal", "Stok rendah", "Menipis"].map(
@@ -238,52 +343,80 @@ export default function InventoryPage() {
 
           {/* TABLE */}
           <div className="bg-white rounded-xl shadow border">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-200">
+            <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
+              <table className="w-full text-sm text-left rtl:text-right text-gray-500">
+                <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3">Nama bahan</th>
+                    <th className="px-6 py-3">Nama Bahan</th>
                     <th className="px-6 py-3">Stok</th>
                     <th className="px-6 py-3">Satuan</th>
-                    <th className="px-6 py-3">Min</th>
+                    <th className="px-6 py-3">Minimum</th>
                     <th className="px-6 py-3">Status</th>
-                    <th className="px-6 py-3 text-center">Aksi</th>
+                    <th className="px-6 py-3">Aksi</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {filteredData.map((item, i) => {
-                    const status = getStatus(item.stok, item.min);
+                  {filteredData.length > 0 ? (
+                    filteredData.map((item) => {
+                      const status = getStatus(
+                        Number(item.qty),
+                        Number(item.minimum_stock),
+                      );
 
-                    return (
-                      <tr key={i} className="border-t">
-                        <td className="px-6 py-4">{item.nama}</td>
-                        <td className="px-6 py-4">{item.stok}</td>
-                        <td className="px-6 py-4">{item.satuan}</td>
-                        <td className="px-6 py-4">{item.min}</td>
+                      return (
+                        <tr
+                          key={item.ingredient_id}
+                          className="bg-white border-b hover:bg-gray-50"
+                        >
+                          <td className="px-6 py-4 font-medium text-gray-900">
+                            {item.ingredient_name}
+                          </td>
 
-                        <td className="px-6 py-4">
-                          <span
-                            className={`px-2 py-1 text-xs rounded ${
-                              status === "normal"
-                                ? "bg-green-100 text-green-700"
-                                : status === "rendah"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-red-100 text-red-700"
-                            }`}
-                          >
-                            {status}
-                          </span>
-                        </td>
+                          <td className="px-6 py-4">{item.qty}</td>
 
-                        <td className="px-6 py-4 text-center">
-                          <button className="text-orange-500 hover:underline">
-                            Input stok
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          <td className="px-6 py-4">{item.unit}</td>
+
+                          <td className="px-6 py-4">{item.minimum_stock}</td>
+
+                          <td className="px-6 py-4">
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-semibold ${
+                                status === "normal"
+                                  ? "bg-green-100 text-green-700"
+                                  : status === "rendah"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : "bg-red-100 text-red-700"
+                              }`}
+                            >
+                              {status}
+                            </span>
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <button
+                              onClick={() => {
+                                setSelectedItem(item);
+                                setShowInputModal(true);
+                              }}
+                              className="font-medium text-orange-600 hover:underline"
+                            >
+                              Input Stok
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-6 py-10 text-center text-gray-500"
+                      >
+                        Tidak ada data stok bahan
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {  Menu,BarChart3,Package,AlertTriangle,TrendingUp,User,LogOut,X, } from "lucide-react";
 import { Table } from "flowbite-react";
@@ -18,135 +18,205 @@ type Report = {
   total: number;
   tanggal: string;
 };
+type Transaction = {
+  id: string;
+  tanggal: string;
+  meja: string;
+  items: number;
+  total: number;
+  metode: string;
+  kasir: string;
+};
 
 export default function ReportsPage() {
   const router = useRouter();
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const [filterType, setFilterType] = useState("hari");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-
+  // DATA LAPORAN
+  const [reportData, setReportData] = useState<Report[]>([]);
   const [filteredData, setFilteredData] = useState<Report[]>([]);
 
+  // FILTER
+  const [periode, setPeriode] = useState("hari_ini");
+  const [tglMulai, setTglMulai] = useState("");
+  const [tglSelesai, setTglSelesai] = useState("");
+
+  // TRANSAKSI
+  const [transactionData, setTransactionData] = useState<Transaction[]>([]);
+
+  // PRODUK TERLARIS
+  const [produkTerlaris, setProdukTerlaris] = useState("-");
+
+  // MENU SIDEBAR
   const menuItems = [
     { name: "Dashboard", icon: "📊", href: "/owner" },
     { name: "Pesanan Real-time", icon: "🛒", href: "/owner/orders" },
     { name: "Laporan", icon: "📄", href: "/owner/reports" },
     { name: "Produk & Menu", icon: "🍪", href: "/owner/products" },
-    {name: "Produksi harian", icon: "🏭", href:"/owner/productions"},
-    { name: "Stok Bahan", icon: "📦", href: "/owner/inventory" },
+    { name: "Produksi harian", icon: "🏭", href: "/owner/productions" },
+    { name: "Stok Bahan Baku", icon: "📦", href: "/owner/inventory" },
     { name: "Resep Produk", icon: "👨‍🍳", href: "/owner/recipes" },
     { name: "Karyawan", icon: "👥", href: "/owner/employees" },
   ];
 
-  // 🔹 DATA
-  const reportData: Report[] = [
-    { id: 1, produk: "Croissant", jumlah: 40, total: 400000, tanggal: "2026-04-24" },
-    { id: 2, produk: "Roti Coklat", jumlah: 50, total: 500000, tanggal: "2026-04-24" },
-    { id: 3, produk: "Kopi Latte", jumlah: 30, total: 300000, tanggal: "2026-04-24" },
-  ];
-  type Transaction = {id: string; tanggal: string; meja: string; items: number; total: number; metode: string; kasir: string;
-  };
+  // AMBIL DATA LAPORAN
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/reports")
+      .then((res) => res.json())
+      .then((data) => {
+        setReportData(data);
+      })
+      .catch((err) => console.error(err));
+  }, []);
 
-  // data grafik
-  const chartData = reportData.map((item) => ({
+// AMBIL DATA TRANSAKSI
+useEffect(() => {
+  fetch("http://127.0.0.1:8000/api/orders")
+    .then((res) => res.json())
+    .then((data) => {
+      setTransactionData(data);
+    })
+    .catch((err) => console.error(err));
+}, []);
+
+//Produk terlaris
+useEffect(() => {
+  fetch("http://127.0.0.1:8000/api/reports/summary")
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.produkTerlaris) {
+        setProdukTerlaris(data.produkTerlaris);
+      }
+    })
+    .catch((err) => console.error(err));
+}, []);
+
+const handleFilter = () => {
+  let result = [...reportData];
+
+  if (periode === "hari_ini") {
+    const today = new Date().toISOString().split("T")[0];
+
+    result = reportData.filter(
+      (item) => item.tanggal === today
+    );
+  }
+
+  else if (periode === "bulan_ini") {
+    const now = new Date();
+
+    result = reportData.filter((item) => {
+      const d = new Date(item.tanggal);
+
+      return (
+        d.getMonth() === now.getMonth() &&
+        d.getFullYear() === now.getFullYear()
+      );
+    });
+  }
+
+  else if (periode === "tahun_ini") {
+    const year = new Date().getFullYear();
+
+    result = reportData.filter(
+      (item) =>
+        new Date(item.tanggal).getFullYear() === year
+    );
+  }
+
+  else if (
+    periode === "kustom" &&
+    tglMulai &&
+    tglSelesai
+  ) {
+    result = reportData.filter((item) => {
+      const tanggal = new Date(item.tanggal);
+
+      return (
+        tanggal >= new Date(tglMulai) &&
+        tanggal <= new Date(tglSelesai)
+      );
+    });
+  }
+
+  setFilteredData(result);
+};
+
+const dataToShow =
+  filteredData.length > 0
+    ? filteredData
+    : reportData;
+
+const totalPendapatan = dataToShow.reduce(
+  (sum, item) => sum + Number(item.total),
+  0
+);
+
+const totalProduk = dataToShow.reduce(
+  (sum, item) => sum + Number(item.jumlah),
+  0
+);
+
+const chartData = dataToShow.map((item) => ({
   tanggal: item.tanggal,
-  pendapatan: item.total,
+  pendapatan: Number(item.total),
 }));
 
-const transactionData: Transaction[] = [
-  {
-    id: "#001",
-    tanggal: "05/04/2026 14:30",
-    meja: "Meja 1",
-    items: 4,
-    total: 125000,
-    metode: "Tunai",
-    kasir: "Rina",
-  },
-  {
-    id: "#002",
-    tanggal: "05/04/2026 14:30",
-    meja: "Meja 2",
-    items: 4,
-    total: 125000,
-    metode: "Tunai",
-    kasir: "Rina",
-  },
-];
+ const downloadExcel = () => {
+  const ws = XLSX.utils.json_to_sheet(dataToShow);
+  const wb = XLSX.utils.book_new();
 
-  // 🔹 FILTER
-  const handleFilter = () => {
-    const today = new Date();
+  XLSX.utils.book_append_sheet(
+    wb,
+    ws,
+    "Laporan"
+  );
 
-    const result = reportData.filter((item) => {
-      const itemDate = new Date(item.tanggal);
+  XLSX.writeFile(
+    wb,
+    "laporan_keuangan.xlsx"
+  );
+};
 
-      if (filterType === "hari") {
-        return itemDate.toDateString() === today.toDateString();
-      }
+const downloadPDF = () => {
+  const doc = new jsPDF();
 
-      if (filterType === "bulan") {
-        return (
-          itemDate.getMonth() === today.getMonth() &&
-          itemDate.getFullYear() === today.getFullYear()
-        );
-      }
+  doc.setFontSize(16);
+  doc.text(
+    "Laporan Keuangan Bakery",
+    14,
+    15
+  );
 
-      if (filterType === "tahun") {
-        return itemDate.getFullYear() === today.getFullYear();
-      }
+  autoTable(doc, {
+    startY: 40,
+    head: [["ID", "Produk", "Jumlah", "Total", "Tanggal"]],
+    body: dataToShow.map((item) => [
+      item.id,
+      item.produk,
+      item.jumlah,
+      `Rp ${Number(item.total).toLocaleString("id-ID")}`,
+      item.tanggal,
+    ]),
+  });
 
-      if (filterType === "custom" && startDate && endDate) {
-        return itemDate >= new Date(startDate) && itemDate <= new Date(endDate);
-      }
+  doc.save("laporan_keuangan.pdf");
+};
 
-      return true;
-    });
+const [inventory, setInventory] = useState<any[]>([]);
 
-    setFilteredData(result);
-  };
+useEffect(() => {
+  fetch("http://127.0.0.1:8000/api/inventory")
+    .then((res) => res.json())
+    .then((data) => setInventory(data))
+    .catch(console.error);
+}, []);
 
-  const dataToShow = filteredData.length ? filteredData : reportData;
-
-  // 🔹 SUMMARY (PAKAI DATA HASIL FILTER)
-  const totalPendapatan = dataToShow.reduce((a, b) => a + b.total, 0);
-  const totalProduk = dataToShow.reduce((a, b) => a + b.jumlah, 0);
-  const [periode, setPeriode] = useState("hari_ini");
-  const [tglMulai, setTglMulai] = useState("");
-  const [tglSelesai, setTglSelesai] = useState("");
-  const downloadExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(dataToShow);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Laporan");
-    XLSX.writeFile(wb, "laporan_keuangan.xlsx");
-  };
-
-  const downloadPDF = () => {
-    const doc = new jsPDF();
-
-    doc.setFontSize(16);
-    doc.text("Laporan Keuangan Bakery", 14, 15);
-
-    doc.setFontSize(10);
-    doc.text(`Total Pendapatan: Rp ${totalPendapatan.toLocaleString()}`, 14, 25);
-    doc.text(`Total Produk: ${totalProduk}`, 14, 32);
-
-    autoTable(doc, {
-      startY: 40,
-      head: [["ID", "Produk", "Jumlah", "Total", "Tanggal"]],
-      body: dataToShow.map((item) => [
-        item.id,
-        item.produk,
-        item.jumlah,
-        `Rp ${item.total.toLocaleString()}`,
-        item.tanggal,
-      ]),
-    });
-
-    doc.save("laporan_keuangan.pdf");
-  };
+const lowStockItems = inventory.filter(
+  (item) =>
+    Number(item.qty) <= Number(item.minimum_stock)
+);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -208,9 +278,9 @@ const transactionData: Transaction[] = [
             <h2 className="text-3xl font-bold">Dashboard Monitoring</h2>
           </div>
           <div className="flex items-center gap-4">
-            <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
-              🔔 Notifikasi (3)
-            </button>
+<button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
+  🔔 Notifikasi ({lowStockItems.length})
+</button>
             <div className="flex items-center gap-2 bg-amber-500 bg-opacity-20 px-4 py-2 rounded-lg">
               <User size={20} />
               <div>
@@ -287,10 +357,8 @@ const transactionData: Transaction[] = [
       disabled:bg-gray-100"
     />
   </div>
-
 </div>
 
-  {/* BUTTON HARUS DI DALAM DIV INI */}
   <div className="flex gap-3 pt-3 border-t">
 
     <button
@@ -323,7 +391,7 @@ const transactionData: Transaction[] = [
             <div className="bg-white p-6 rounded-xl shadow border-l-4 border-green-400">
               <p>Total Pendapatan</p>
               <h3 className="text-2xl font-bold">
-                Rp {totalPendapatan.toLocaleString()}
+                Rp {Number(totalPendapatan).toLocaleString("id-ID")}
               </h3>
             </div>
 
@@ -334,7 +402,9 @@ const transactionData: Transaction[] = [
 
             <div className="bg-white p-6 rounded-xl shadow border-l-4 border-orange-400">
               <p>Produk Terlaris</p>
-              <h3 className="text-2xl font-bold">Croissant</h3>
+              <h3 className="text-2xl font-bold">
+                {produkTerlaris}
+              </h3>
             </div>
        </div>
 
@@ -343,19 +413,29 @@ const transactionData: Transaction[] = [
     Grafik Pendapatan
   </h3>
 
-  <ResponsiveContainer width="100%" height={300}>
-    <AreaChart data={chartData}>
-      <XAxis dataKey="tanggal" />
-      <YAxis />
-      <Tooltip />
-      <Area
-        type="monotone"
-        dataKey="pendapatan"
-        stroke="#f97316"
-        fill="#fdba74"
-      />
-    </AreaChart>
-  </ResponsiveContainer>
+ {chartData.length > 0 ? (
+    <ResponsiveContainer width="100%" height={300}>
+      <AreaChart data={chartData}>
+        <XAxis dataKey="tanggal" />
+        <YAxis />
+        <Tooltip />
+        <Area
+          type="monotone"
+          dataKey="pendapatan"
+          stroke="#f97316"
+          fill="#fdba74"
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  ) : (
+    <div className="h-[300px] flex flex-col items-center justify-center text-gray-500">
+      <div className="text-5xl mb-2">📊</div>
+      <p className="font-medium">Belum ada data pendapatan</p>
+      <p className="text-sm text-gray-400">
+        Grafik akan muncul setelah ada transaksi
+      </p>
+    </div>
+  )}
 </div>
 
 <div className="bg-white p-6 rounded-xl shadow">
@@ -396,7 +476,7 @@ const transactionData: Transaction[] = [
             </td>
 
             <td className="px-6 py-4">
-              Rp {trx.total.toLocaleString()}
+              Rp {trx.total.toLocaleString("id-ID")}
             </td>
 
             <td className="px-6 py-4">

@@ -45,7 +45,7 @@ export default function OrdersPage() {
     { name: "Laporan", icon: "📄", href: "/owner/reports" },
     { name: "Produk & Menu", icon: "🍪", href: "/owner/products" },
     { name: "Produksi harian", icon: "🏭", href: "/owner/productions" },
-    { name: "Stok Bahan", icon: "📦", href: "/owner/inventory" },
+    { name: "Stok Bahan Baku", icon: "📦", href: "/owner/inventory" },
     { name: "Resep Produk", icon: "👨‍🍳", href: "/owner/recipes" },
     { name: "Karyawan", icon: "👥", href: "/owner/employees" },
   ];
@@ -150,6 +150,20 @@ export default function OrdersPage() {
     return `${minutes}m ${seconds}s`;
   };
 
+const [inventory, setInventory] = useState<any[]>([]);
+
+useEffect(() => {
+  fetch("http://127.0.0.1:8000/api/inventory")
+    .then((res) => res.json())
+    .then((data) => setInventory(data))
+    .catch(console.error);
+}, []);
+
+const lowStockItems = inventory.filter(
+  (item) =>
+    Number(item.qty) <= Number(item.minimum_stock)
+);
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* SIDEBAR */}
@@ -210,9 +224,9 @@ export default function OrdersPage() {
             <h2 className="text-3xl font-bold">Dashboard Monitoring</h2>
           </div>
           <div className="flex items-center gap-4">
-            <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
-              🔔 Notifikasi (3)
-            </button>
+<button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
+  🔔 Notifikasi ({lowStockItems.length})
+</button>
             <div className="flex items-center gap-2 bg-amber-500 bg-opacity-20 px-4 py-2 rounded-lg">
               <User size={20} />
               <div>

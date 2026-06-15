@@ -30,8 +30,8 @@ export default function OwnerDashboard() {
     { name: "Pesanan Real-time", icon: "🛒", href: "/owner/orders" },
     { name: "Laporan", icon: "📄", href: "/owner/reports" },
     { name: "Produk & Menu", icon: "🍪", href: "/owner/products" },
-    {name: "Produksi harian", icon: "🏭", href:"/owner/productions"},
-    { name: "Stok Bahan", icon: "📦", href: "/owner/inventory" },
+    { name: "Produksi harian", icon: "🏭", href: "/owner/productions" },
+    { name: "Stok Bahan Baku", icon: "📦", href: "/owner/inventory" },
     { name: "Resep Produk", icon: "👨‍🍳", href: "/owner/recipes" },
     { name: "Karyawan", icon: "👥", href: "/owner/employees" },
   ];
@@ -51,6 +51,19 @@ useEffect(() => {
     .catch((err) => console.error(err));
 }, []);
 
+const [inventory, setInventory] = useState<any[]>([]);
+
+useEffect(() => {
+  fetch("http://127.0.0.1:8000/api/inventory")
+    .then((res) => res.json())
+    .then((data) => setInventory(data))
+    .catch(console.error);
+}, []);
+
+const lowStockItems = inventory.filter(
+  (item) =>
+    Number(item.qty) <= Number(item.minimum_stock)
+);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -111,9 +124,9 @@ useEffect(() => {
             <h2 className="text-3xl font-bold">Dashboard Monitoring</h2>
           </div>
           <div className="flex items-center gap-4">
-            <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
-              🔔 Notifikasi (3)
-            </button>
+          <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
+            🔔 Notifikasi ({lowStockItems.length})
+          </button>
             <div className="flex items-center gap-2 bg-amber-500 bg-opacity-20 px-4 py-2 rounded-lg">
               <User size={20} />
               <div>
@@ -168,9 +181,6 @@ useEffect(() => {
                 <div className="bg-green-100 p-3 rounded-lg">
                   <span className="text-3xl">💰</span>
                 </div>
-                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-semibold">
-                  +12%
-                </span>
               </div>
               <p className="text-gray-600 text-sm mb-2">Pendapatan Hari Ini</p>
                 <h3 className="text-3xl font-bold text-amber-950">
@@ -186,9 +196,6 @@ useEffect(() => {
                 <div className="bg-blue-100 p-3 rounded-lg">
                   <span className="text-3xl">✅</span>
                 </div>
-                <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
-                  +8%
-                </span>
               </div>
               <p className="text-gray-600 text-sm mb-2">Total Transaksi</p>
                 <h3 className="text-3xl font-bold text-amber-950">
@@ -202,9 +209,6 @@ useEffect(() => {
                 <div className="bg-orange-100 p-3 rounded-lg">
                   <TrendingUp className="text-orange-600" size={24} />
                 </div>
-                <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-semibold">
-                  +15%
-                </span>
               </div>
               <p className="text-gray-600 text-sm mb-2">Produk Terlaris</p>
                 <h3 className="text-3xl font-bold text-amber-950">
@@ -222,7 +226,7 @@ useEffect(() => {
               </div>
               <p className="text-gray-600 text-sm mb-2">Stok Memipis</p>
                 <h3 className="text-3xl font-bold text-amber-950">
-                  {dashboardData?.low_stock || 0} Item
+                  {lowStockItems.length} Item
                 </h3>            
             </div>
           </div>

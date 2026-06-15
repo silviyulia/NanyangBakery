@@ -15,8 +15,8 @@ class Order extends Model
     protected $table = 'orders';
 
     // Jika primary key bukan "id"
-    protected $primaryKey = 'order_id';
-
+    protected $primaryKey = 'id';
+    
     public $incrementing = true;
 
     protected $keyType = 'int';
@@ -35,6 +35,7 @@ class Order extends Model
         'updated_at' => 'datetime',
     ];
 
+    
     /**
      * Relasi ke meja
      */
@@ -67,10 +68,9 @@ class Order extends Model
         return $this->hasMany(
             OrderItem::class,
             'order_id',
-            'order_id'
+            'id'
         );
     }
-
     /**
      * Relasi transaksi
      */

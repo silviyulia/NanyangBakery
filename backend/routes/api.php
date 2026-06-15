@@ -42,3 +42,21 @@ Route::get('/transactions/daily-summary', [TransactionController::class, 'dailyS
 use App\Http\Controllers\Api\DashboardController;
 Route::get('/dashboard', [DashboardController::class, 'index']);
 Route::get('/sales-chart', [DashboardController::class, 'salesChart']);
+
+use App\Http\Controllers\Api\ReportController;
+Route::get('/reports', [ReportController::class, 'index']);
+Route::get('/reports/summary', [ReportController::class, 'summary']);
+Route::get('/reports/orders', [ReportController::class, 'orders']);
+
+use App\Http\Controllers\Api\ProductionController;
+Route::get('/productions', [ProductionController::class, 'index']);
+Route::post('/productions', [ProductionController::class, 'store']);
+Route::get('/productions/today', [ProductionController::class, 'today']);
+Route::delete('/production/{id}' , [ProductionController::class, 'destroy']);
+
+use App\Http\Controllers\Api\InventoryController;
+Route::get('/inventory', [InventoryController::class, 'index']);
+Route::post('/inventory', [InventoryController::class, 'store']);
+Route::put('/inventory/{id}', [InventoryController::class, 'update']);
+Route::delete('/inventory/{id}', [InventoryController::class, 'destroy']);
+Route::put('/inventory/{id}/stock', [InventoryController::class, 'updateStock']);

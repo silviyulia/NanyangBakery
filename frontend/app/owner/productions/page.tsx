@@ -26,65 +26,62 @@ export default function ProductionPage() {
   const pathname = usePathname();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
-
   const [products, setProducts] = useState<Product[]>([]);
   const [productId, setProductId] = useState("");
+  const [editId, setEditId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState("");
-
   const menuItems = [
-    {
-      name: "Dashboard",
-      icon: "📊",
-      href: "/owner",
-    },
-    {
-      name: "Produk & Menu",
-      icon: "🍞",
-      href: "/owner/products",
-    },
-    {
-      name: "Stok Bahan",
-      icon: "📦",
-      href: "/owner/inventory",
-    },
-    {
-      name: "Resep Produk",
-      icon: "👨‍🍳",
-      href: "/owner/recipes",
-    },
-    {
-      name: "Produksi Harian",
-      icon: "🏭",
-      href: "/owner/production",
-    },
-    {
-      name: "Laporan",
-      icon: "📄",
-      href: "/owner/reports",
-    },
-    {
-      name: "Karyawan",
-      icon: "👥",
-      href: "/owner/employees",
-    },
+    { name: "Dashboard", icon: "📊", href: "/owner" },
+    { name: "Pesanan Real-time", icon: "🛒", href: "/owner/orders" },
+    { name: "Laporan", icon: "📄", href: "/owner/reports" },
+    { name: "Produk & Menu", icon: "🍪", href: "/owner/products" },
+    { name: "Produksi harian", icon: "🏭", href: "/owner/productions" },
+    { name: "Stok Bahan Baku", icon: "📦", href: "/owner/inventory" },
+    { name: "Resep Produk", icon: "👨‍🍳", href: "/owner/recipes" },
+    { name: "Karyawan", icon: "👥", href: "/owner/employees" },
   ];
-const [today, setToday] = useState("");
+  const [today, setToday] = useState("");
 
   useEffect(() => {
     setToday(new Date().toLocaleDateString("id-ID"));
   }, []);
-  
-  useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/products")
-      .then((res) => res.json())
-      .then((data) => {
-        setProducts(data);
-      })
-      .catch((err) => {
-        console.error("Gagal mengambil produk:", err);
-      });
-  }, []);
 
+  useEffect(() => {
+    loadProducts();
+    loadProductions();
+  }, []);
+  const loadProducts = async () => {
+    const res = await fetch("http://127.0.0.1:8000/api/products");
+
+    const data = await res.json();
+
+    setProducts(data);
+  };
+
+  const [productions, setProductions] = useState<any[]>([]);
+  const [totalProduction, setTotalProduction] = useState(0);
+  const [productCount, setProductCount] = useState(0);
+
+  const loadProductions = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/productions");
+
+      const data = await res.json();
+
+      setProductions(data);
+
+      const total = data.reduce(
+        (sum: number, item: any) => sum + Number(item.quantity_produced),
+        0,
+      );
+
+      setTotalProduction(total);
+
+      setProductCount(new Set(data.map((item: any) => item.product_id)).size);
+    } catch (err) {
+      console.error(err);
+    }
+  };
   const handleSave = async () => {
     if (!productId || !quantity) {
       alert("Pilih produk dan masukkan jumlah produksi");
@@ -92,19 +89,20 @@ const [today, setToday] = useState("");
     }
 
     try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/productions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            product_id: productId,
-            quantity: quantity,
-          }),
-        }
-      );
+      const url = editId
+        ? `http://127.0.0.1:8000/api/productions/${editId}`
+        : "http://127.0.0.1:8000/api/productions";
+      const method = editId ? "PUT" : "POST";
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          product_id: Number(productId),
+          quantity_produced: Number(quantity),
+        }),
+      });
 
       const data = await response.json();
 
@@ -113,7 +111,7 @@ const [today, setToday] = useState("");
       }
 
       alert(data.message);
-
+      await loadProductions();
       setProductId("");
       setQuantity("");
     } catch (error) {
@@ -121,104 +119,110 @@ const [today, setToday] = useState("");
       alert("Gagal menyimpan produksi");
     }
   };
+  const handleEdit = (item: any) => {
+    setEditId(item.production_id);
+    setProductId(String(item.product_id));
+    setQuantity(String(item.quantity_produced));
+  };
+  const handleDelete = async (id: number) => {
+    if (!confirm("Yakin hapus data produksi?")) return;
 
+    try {
+      await fetch(`http://127.0.0.1:8000/api/productions/${id}`, {
+        method: "DELETE",
+      });
+
+      await loadProductions();
+    } catch (error) {
+      console.error(error);
+    }
+  };
   const handleLogout = () => {
     localStorage.removeItem("user");
     router.push("/login");
   };
 
+const [inventory, setInventory] = useState<any[]>([]);
+
+useEffect(() => {
+  fetch("http://127.0.0.1:8000/api/inventory")
+    .then((res) => res.json())
+    .then((data) => setInventory(data))
+    .catch(console.error);
+}, []);
+
+const lowStockItems = inventory.filter(
+  (item) =>
+    Number(item.qty) <= Number(item.minimum_stock)
+);
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
       <aside
         className={`${
           sidebarOpen ? "w-64" : "w-0"
         } bg-gradient-to-b from-amber-800 to-amber-900 text-white transition-all duration-300 overflow-hidden flex flex-col shadow-lg`}
       >
-        {/* Logo */}
         <div className="p-6 border-b border-amber-700">
           <div className="flex items-center gap-3">
-            <div className="bg-orange-500 rounded-lg p-2 text-lg">
+            <div className="bg-orange-500 rounded-lg p-2 font-bold text-lg">
               🥖
             </div>
-
             <div>
-              <h1 className="font-bold text-lg">
-                Bakery POS
-              </h1>
-
-              <p className="text-xs text-amber-200">
-                Owner Panel
-              </p>
+              <h1 className="font-bold text-lg">Bakery POS</h1>
+              <p className="text-xs text-amber-200">Owner</p>
             </div>
           </div>
         </div>
 
-        {/* Menu */}
-        <nav className="flex-1 p-4 space-y-2">
-          {menuItems.map((item) => (
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          {menuItems.map((item, idx) => (
             <Link
-              key={item.href}
+              key={idx}
               href={item.href}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                pathname === item.href
+                item.href === "/owner/productions"
                   ? "bg-orange-500 text-white"
                   : "hover:bg-amber-700 text-amber-100"
               }`}
             >
-              <span>{item.icon}</span>
-              <span>{item.name}</span>
+              <span className="text-xl">{item.icon}</span>
+              <span className="font-medium">{item.name}</span>
             </Link>
           ))}
         </nav>
 
-        {/* Footer */}
-        <div className="border-t border-amber-700 p-4">
+        <div className="p-4 border-t border-amber-700">
           <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-600 transition"
+            onClick={() => router.push("/login")}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-600 transition text-white"
           >
-            <LogOut size={18} />
-            Logout
+            <LogOut size={20} />
+            <span className="font-medium">Logout</span>
           </button>
         </div>
       </aside>
 
-      {/* Main */}
+      {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {/* Navbar */}
-        <header className="bg-gradient-to-r from-amber-800 to-amber-900 text-white shadow-md px-6 py-4 flex justify-between items-center">
+        {/* Top Header */}
+        <header className="bg-gradient-to-r from-amber-800 to-amber-900 text-white shadow-md p-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() =>
-                setSidebarOpen(!sidebarOpen)
-              }
-            >
+            <button onClick={() => setSidebarOpen(!sidebarOpen)}>
               {sidebarOpen ? <X /> : <Menu />}
             </button>
-
-            <h2 className="text-2xl font-bold">
-              Produksi Harian
-            </h2>
+            <h2 className="text-3xl font-bold">Dashboard Monitoring</h2>
           </div>
-
           <div className="flex items-center gap-4">
-            <button className="bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-lg">
-              🔔 Notifikasi (3)
-            </button>
-
-            <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg">
-              <User size={18} />
-
+<button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
+  🔔 Notifikasi ({lowStockItems.length})
+</button>
+            <div className="flex items-center gap-2 bg-amber-500 bg-opacity-20 px-4 py-2 rounded-lg">
+              <User size={20} />
               <div>
-                <p className="text-sm font-semibold">
-                  Admin User
-                </p>
-
-                <p className="text-xs text-amber-100">
-                  Owner
-                </p>
+                <p className="text-sm font-semibold">Admin User</p>
+                <p className="text-xs text-amber-200">Owner</p>
               </div>
             </div>
           </div>
@@ -233,8 +237,7 @@ const [today, setToday] = useState("");
             </h1>
 
             <p className="text-gray-600">
-              Catat jumlah produk yang diproduksi hari
-              ini
+              Catat jumlah produk yang diproduksi hari ini
             </p>
           </div>
 
@@ -243,57 +246,40 @@ const [today, setToday] = useState("");
             <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-400">
               <div className="flex justify-between">
                 <div>
-                  <p className="text-gray-500 text-sm">
-                    Produksi Hari Ini
-                  </p>
+                  <p className="text-gray-500 text-sm">Produksi Hari Ini</p>
 
                   <h2 className="text-3xl font-bold text-amber-950">
-                    120
+                    {totalProduction}
                   </h2>
                 </div>
 
-                <Factory
-                  className="text-orange-500"
-                  size={40}
-                />
+                <Factory className="text-orange-500" size={40} />
               </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-400">
               <div className="flex justify-between">
                 <div>
-                  <p className="text-gray-500 text-sm">
-                    Produk Diproduksi
-                  </p>
+                  <p className="text-gray-500 text-sm">Produk Diproduksi</p>
 
                   <h2 className="text-3xl font-bold text-amber-950">
-                    6
+                    {productCount}
                   </h2>
                 </div>
 
-                <Package
-                  className="text-green-500"
-                  size={40}
-                />
+                <Package className="text-green-500" size={40} />
               </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-400">
               <div className="flex justify-between">
                 <div>
-                  <p className="text-gray-500 text-sm">
-                    Tanggal
-                  </p>
+                  <p className="text-gray-500 text-sm">Tanggal</p>
 
-                  <h2 className="text-xl font-bold text-amber-950">
-                    {today}
-                  </h2>
+                  <h2 className="text-xl font-bold text-amber-950">{today}</h2>
                 </div>
 
-                <Calendar
-                  className="text-blue-500"
-                  size={40}
-                />
+                <Calendar className="text-blue-500" size={40} />
               </div>
             </div>
           </div>
@@ -306,27 +292,20 @@ const [today, setToday] = useState("");
 
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <label className="block mb-2 font-medium">
-                  Produk
-                </label>
+                <label className="block mb-2 font-medium">Produk</label>
 
                 <select
-                value={productId}
-                onChange={(e) => setProductId(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-3"
+                  value={productId}
+                  onChange={(e) => setProductId(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg p-3"
                 >
-                <option value="">
-                    Pilih Produk
-                </option>
+                  <option value="">Pilih Produk</option>
 
-                {products.map((product) => (
-                    <option
-                    key={product.product_id}
-                    value={product.product_id}
-                    >
-                    {product.name}
+                  {products.map((product) => (
+                    <option key={product.product_id} value={product.product_id}>
+                      {product.name}
                     </option>
-                ))}
+                  ))}
                 </select>
               </div>
 
@@ -339,9 +318,7 @@ const [today, setToday] = useState("");
                   type="number"
                   min="1"
                   value={quantity}
-                  onChange={(e) =>
-                    setQuantity(e.target.value)
-                  }
+                  onChange={(e) => setQuantity(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg p-3"
                   placeholder="Masukkan jumlah"
                 />
@@ -367,42 +344,42 @@ const [today, setToday] = useState("");
               <table className="w-full">
                 <thead>
                   <tr className="bg-amber-50">
-                    <th className="p-3 text-left">
-                      Produk
-                    </th>
-                    <th className="p-3 text-left">
-                      Jumlah
-                    </th>
-                    <th className="p-3 text-left">
-                      Waktu
-                    </th>
+                    <th className="p-3 text-left">Produk</th>
+                    <th className="p-3 text-left">Jumlah</th>
+                    <th className="p-3 text-left">Waktu</th>
+                    <th className="p-3 text-left">Aksi</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  <tr className="border-b">
-                    <td className="p-3">
-                      Croissant
-                    </td>
-                    <td className="p-3">
-                      50 pcs
-                    </td>
-                    <td className="p-3">
-                      08:00
-                    </td>
-                  </tr>
+                  {productions.map((item: any) => (
+                    <tr key={item.production_id} className="border-b">
+                      <td className="p-3">{item.product_name}</td>
 
-                  <tr className="border-b">
-                    <td className="p-3">
-                      Donat Coklat
-                    </td>
-                    <td className="p-3">
-                      30 pcs
-                    </td>
-                    <td className="p-3">
-                      09:30
-                    </td>
-                  </tr>
+                      <td className="p-3">{item.quantity_produced} pcs</td>
+
+                      <td className="p-3">
+                        {new Date(
+                          item.production_date.replace(" ", "T"),
+                        ).toLocaleString("id-ID")}
+                      </td>
+                      <td className="p-3 flex gap-2">
+                        <button
+                          onClick={() => handleEdit(item)}
+                          className="bg-yellow-500 text-white px-2 py-1 rounded"
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          onClick={() => handleDelete(item.production_id)}
+                          className="bg-red-500 text-white px-2 py-1 rounded"
+                        >
+                          Hapus
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

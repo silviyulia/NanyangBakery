@@ -28,7 +28,7 @@ class ProductController extends Controller
             'name' => 'required|string|max:100',
             'price' => 'required|numeric',
             'status' => 'required|in:active,inactive',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
 
@@ -71,6 +71,12 @@ class ProductController extends Controller
     // Update product
     public function update(Request $request,$id)
     {
+           \Log::info('UPDATE PRODUCT', [
+        'id' => $id,
+        'all' => $request->all(),
+        'has_image' => $request->hasFile('image'),
+    ]);
+    
         $validated = $request->validate([
             'category_id' => 'required|integer',
             'name' => 'required|string|max:100',
@@ -110,12 +116,9 @@ class ProductController extends Controller
     public function destroy($id)
     {
 
-
         $product = DB::table('products')
         ->where('product_id',$id)
         ->first();
-
-
 
         if($product && $product->image){
 
@@ -124,13 +127,9 @@ class ProductController extends Controller
 
         }
 
-
-
         DB::table('products')
         ->where('product_id',$id)
         ->delete();
-
-
 
         return response()->json([
             'message'=>'Produk berhasil dihapus'

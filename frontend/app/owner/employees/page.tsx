@@ -35,8 +35,8 @@ export default function EmployeesPage() {
     { name: "Pesanan Real-time", icon: "🛒", href: "/owner/orders" },
     { name: "Laporan", icon: "📄", href: "/owner/reports" },
     { name: "Produk & Menu", icon: "🍪", href: "/owner/products" },
-    {name: "Produksi harian", icon: "🏭", href:"/owner/productions"},
-    { name: "Stok Bahan", icon: "📦", href: "/owner/inventory" },
+    { name: "Produksi harian", icon: "🏭", href: "/owner/productions" },
+    { name: "Stok Bahan Baku", icon: "📦", href: "/owner/inventory" },
     { name: "Resep Produk", icon: "👨‍🍳", href: "/owner/recipes" },
     { name: "Karyawan", icon: "👥", href: "/owner/employees" },
   ];

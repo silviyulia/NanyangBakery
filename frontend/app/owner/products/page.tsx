@@ -12,6 +12,7 @@ interface Product {
   price: number;
   image?: string;
   status: string;
+  stock?: number | string;
 }
 interface Category {
   category_id: number;
@@ -37,7 +38,7 @@ export default function ProductsPage() {
     { name: "Laporan", icon: "📄", href: "/owner/reports" },
     { name: "Produk & Menu", icon: "🍪", href: "/owner/products" },
     { name: "Produksi harian", icon: "🏭", href: "/owner/productions" },
-    { name: "Stok Bahan", icon: "📦", href: "/owner/inventory" },
+    { name: "Stok Bahan Baku", icon: "📦", href: "/owner/inventory" },
     { name: "Resep Produk", icon: "👨‍🍳", href: "/owner/recipes" },
     { name: "Karyawan", icon: "👥", href: "/owner/employees" },
   ];
@@ -91,7 +92,8 @@ export default function ProductsPage() {
       alert("Semua field harus diisi");
       return;
     }
-
+    const res = await fetch("http://127.0.0.1:8000/api/products");
+    console.log(await res.json());
     try {
       const formData = new FormData();
 
@@ -103,27 +105,46 @@ export default function ProductsPage() {
       if (image) {
         formData.append("image", image);
       }
-
       const url = editId
         ? `http://127.0.0.1:8000/api/products/${editId}`
         : "http://127.0.0.1:8000/api/products";
 
-      const method = editId ? "PUT" : "POST";
+      if (editId) {
+        formData.append("_method", "PUT");
+      }
 
-      console.log(`${method} ${url}`, {
-        editId,
+      const res = await fetch(url, {
+        method: "POST",
+        body: formData,
+      });
+
+      console.log({
         name,
         category_id,
         price,
         status,
       });
 
-      const res = await fetch(url, {
-        method: method,
-        body: formData,
-      });
+      console.log("Request URL:", url);
+      console.log("Edit ID:", editId);
+      console.log("Image:", image);
 
-      const data = await res.json();
+      for (const pair of formData.entries()) {
+        console.log(pair[0], pair[1]);
+      }
+
+      const responseText = await res.text();
+      console.log(responseText);
+
+      let data;
+
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        data = {};
+      }
+
+      console.log(responseText);
 
       console.log("Response:", data, "Status:", res.status);
 
@@ -200,22 +221,33 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const categoryTabs = ["Semua", ...categories.map((c) => c.name)];
   const getCategoryName = (categoryId: number) => {
-  const category = categories.find(
-    (c) => c.category_id === categoryId
-  );
+    const category = categories.find((c) => c.category_id === categoryId);
 
-  return category?.name || "Tidak diketahui";
-};
+    return category?.name || "Tidak diketahui";
+  };
   // FILTER LOGIC
   const filteredProducts = products.filter((product) => {
-  const matchSearch = product.name
-    .toLowerCase()
-    .includes(filterSearch.toLowerCase());
-  const categoryName = getCategoryName(product.category_id);
-  const matchCategory =
-    filterCategory === "Semua" || categoryName === filterCategory;
+    const matchSearch = product.name
+      .toLowerCase()
+      .includes(filterSearch.toLowerCase());
+    const categoryName = getCategoryName(product.category_id);
+    const matchCategory =
+      filterCategory === "Semua" || categoryName === filterCategory;
     return matchSearch && matchCategory;
   });
+
+  const [inventory, setInventory] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/inventory")
+      .then((res) => res.json())
+      .then((data) => setInventory(data))
+      .catch(console.error);
+  }, []);
+
+  const lowStockItems = inventory.filter(
+    (item) => Number(item.qty) <= Number(item.minimum_stock),
+  );
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -274,7 +306,7 @@ export default function ProductsPage() {
           </div>
           <div className="flex items-center gap-4">
             <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
-              🔔 Notifikasi (3)
+              🔔 Notifikasi ({lowStockItems.length})
             </button>
             <div className="flex items-center gap-2 bg-amber-500 bg-opacity-20 px-4 py-2 rounded-lg">
               <User size={20} />
@@ -507,15 +539,27 @@ export default function ProductsPage() {
                   />
                 </div>
 
-                  <h3 className="font-bold mt-2">{p.name}</h3>
+                <h3 className="font-bold mt-2">{p.name}</h3>
 
-                  <p className="text-sm text-gray-500">
-                    {getCategoryName(p.category_id)}
-                  </p>
+                <p className="text-sm text-gray-500">
+                  {getCategoryName(p.category_id)}
+                </p>
 
-                  <p className="text-orange-500 font-bold">
-                    Rp {Number(p.price).toLocaleString("id-ID")}
-                  </p>
+                <p className="text-orange-500 font-bold">
+                  Rp {Number(p.price).toLocaleString("id-ID")}
+                </p>
+
+                {p.stock !== "-" && (
+                  <span
+                    className={`inline-block mt-2 px-2 py-1 rounded text-xs font-semibold ${
+                      Number(p.stock) <= 5
+                        ? "bg-red-100 text-red-700"
+                        : "bg-green-100 text-green-700"
+                    }`}
+                  >
+                    Stok: {p.stock}
+                  </span>
+                )}
 
                 <span
                   className={`text-xs px-2 py-1 rounded mt-2 inline-block ${

@@ -11,7 +11,7 @@ class OrderItem extends Model
     use HasFactory;
 
     protected $table = 'order_items';
-    protected $primaryKey = 'order_item_id';
+    protected $primaryKey = 'id';
     public $incrementing = true;
     protected $keyType = 'bigint';
 
@@ -37,9 +37,8 @@ class OrderItem extends Model
      */
     public function order(): BelongsTo
     {
-        return $this->belongsTo(Order::class, 'order_id', 'order_id');
+        return $this->belongsTo(Order::class, 'order_id', 'id');
     }
-
     /**
      * Get the product for this item.
      */
