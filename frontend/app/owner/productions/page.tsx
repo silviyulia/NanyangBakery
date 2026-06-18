@@ -125,7 +125,7 @@ export default function ProductionPage() {
     setQuantity(String(item.quantity_produced));
   };
 
-  const handleDelete = async (id: number) => {
+ {/* const handleDelete = async (id: number) => {
   const ok = confirm(`yakin ingin menghapus ini?`);
 
   console.log("Confirm =", ok);
@@ -158,7 +158,7 @@ export default function ProductionPage() {
     console.error("ERROR DELETE:", err);
     alert("Error saat delete");
   }
-};
+}; */}
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -369,7 +369,7 @@ export default function ProductionPage() {
                     <th className="p-3 text-left">Produk</th>
                     <th className="p-3 text-left">Jumlah</th>
                     <th className="p-3 text-left">Waktu</th>
-                    <th className="p-3 text-left">Aksi</th>
+                    {/*<th className="p-3 text-left">Aksi</th>*/}
                   </tr>
                 </thead>
 
@@ -385,7 +385,7 @@ export default function ProductionPage() {
                           item.production_date.replace(" ", "T"),
                         ).toLocaleString("id-ID")}
                       </td>
-                     <td className="p-3">
+                     {/*<td className="p-3">
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleEdit(item)}
@@ -399,9 +399,9 @@ export default function ProductionPage() {
                             className="bg-red-500 text-white px-2 py-1 rounded"
                           >
                             Hapus
-                          </button>
+                          </button> 
                         </div>
-                      </td>
+                      </td>*/}
                     </tr>
                   ))}
                 </tbody>

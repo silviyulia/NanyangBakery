@@ -15,14 +15,13 @@ class OrderItem extends Model
     public $incrementing = true;
     protected $keyType = 'bigint';
 
-    protected $fillable = [
-        'order_id',
-        'product_id',
-        'quantity',
-        'price',
-        'subtotal',
-        'status',
-    ];
+protected $fillable = [
+    'order_id',
+    'product_id',
+    'quantity',
+    'price',
+    'subtotal',
+];
 
     protected $casts = [
         'quantity' => 'integer',

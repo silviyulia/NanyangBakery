@@ -21,19 +21,17 @@ class Order extends Model
 
     protected $keyType = 'int';
 
-    protected $fillable = [
-        'table_id',
-        'waitres_id',
-        'status',
-        'total_price',
-        'notes',
-    ];
+protected $fillable = [
+    'table_id',
+    'status',
+    'total_amount',
+];
 
-    protected $casts = [
-        'total_price' => 'decimal:2',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-    ];
+protected $casts = [
+    'total_amount' => 'decimal:2',
+    'created_at' => 'datetime',
+    'updated_at' => 'datetime',
+];
 
     
     /**
@@ -76,11 +74,11 @@ class Order extends Model
      */
     public function transaction(): HasOne
     {
-        return $this->hasOne(
-            Transaction::class,
-            'order_id',
-            'order_id'
-        );
+return $this->hasOne(
+    Transaction::class,
+    'order_id',
+    'id'
+);
     }
 
     /**
@@ -90,8 +88,8 @@ class Order extends Model
     {
         $this->loadMissing('items');
 
-        $this->total_price = $this->items->sum(function ($item) {
-            return $item->subtotal ?? ($item->quantity * $item->price);
+        $this->total_amount = $this->items->sum(function ($item) {
+                return $item->subtotal ?? ($item->quantity * $item->price);
         });
 
         $this->save();

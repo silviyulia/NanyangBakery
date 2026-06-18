@@ -101,26 +101,21 @@ class RecipeController extends Controller
 
     // PUT /api/recipes/{id}
     public function update(Request $request, $id)
-    {
-        $validated = $request->validate([
-            'product_id' => 'required|exists:products,product_id',
-            'ingredient_id' => 'required|exists:ingredients,ingredient_id',
-            'quantity' => 'required|numeric|min:0.01',
-        ]);
+{
+    Recipe::where('product_id', $id)->delete();
 
-        $updated = DB::table('recipes')
-            ->where('recipe_id', $id)
-            ->update([
-                'product_id' => $validated['product_id'],
-                'ingredient_id' => $validated['ingredient_id'],
-                'quantity' => $validated['quantity'],
-            ]);
-
-        return response()->json([
-            'message' => 'Resep berhasil diperbarui',
-            'updated' => $updated
+    foreach ($request->ingredients as $ingredient) {
+        Recipe::create([
+            'product_id' => $request->product_id,
+            'ingredient_id' => $ingredient['ingredient_id'],
+            'quantity' => $ingredient['quantity'],
         ]);
     }
+
+    return response()->json([
+        'message' => 'Recipe updated successfully'
+    ]);
+}
 
     // DELETE /api/recipes/{id}
     public function destroy($id)

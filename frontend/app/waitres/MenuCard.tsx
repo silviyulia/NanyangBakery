@@ -6,6 +6,7 @@ export type MenuItem = {
   price: number;
   image: string;
   category: string;
+  stock: number;
 };
 
 type MenuCardProps = {
@@ -16,7 +17,12 @@ type MenuCardProps = {
 
 export default function MenuCard({ item, addToCart, disabled }: MenuCardProps) {
   return (
-    <div className="group overflow-hidden rounded-[20px] border border-orange-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+    <div
+      className={`group overflow-hidden rounded-[20px] border border-orange-200 bg-white shadow-sm transition ${
+        item.stock <= 0 ? "opacity-60" : "hover:-translate-y-1 hover:shadow-lg"
+      }`}
+    >
+      {" "}
       <div className="relative h-32 overflow-hidden bg-orange-50">
         <img
           src={item.image}
@@ -36,22 +42,31 @@ export default function MenuCard({ item, addToCart, disabled }: MenuCardProps) {
         <h2 className="mt-2 text-sm font-semibold text-amber-950">
           {item.name}
         </h2>
-       {/* <p className="mt-1 text-xs leading-4 text-orange-700">
-          {item.description}
-        </p> */}
-        <button
-          type="button"
-          onClick={() => addToCart(item)}
-          disabled={disabled}
-          className={`mt-3 inline-flex w-full items-center justify-center rounded-2xl px-3 py-2 text-xs font-semibold text-white transition ${
-            disabled
-              ? "cursor-not-allowed bg-orange-300 text-orange-700"
-              : "bg-orange-600 hover:bg-orange-700"
+
+        <p
+          className={`mt-1 text-xs font-medium ${
+            item.stock <= 5 ? "text-red-600" : "text-green-600"
           }`}
         >
-          {disabled ? "Pilih meja" : "Tambah"}
-        </button>
+          Stok: {item.stock}
+        </p>
+
+        {/* <p className="mt-1 text-xs leading-4 text-orange-700">
+          {item.description}
+        </p> */}
       </div>
+      <button
+        type="button"
+        onClick={() => addToCart(item)}
+        disabled={disabled || item.stock <= 0}
+        className={`mt-3 inline-flex w-full items-center justify-center rounded-2xl px-3 py-2 text-xs font-semibold transition ${
+          disabled || item.stock <= 0
+            ? "cursor-not-allowed bg-gray-300 text-gray-600"
+            : "bg-orange-600 text-white hover:bg-orange-700"
+        }`}
+      >
+        {item.stock <= 0 ? "Stok Habis" : disabled ? "Pilih meja" : "Tambah"}
+      </button>
     </div>
   );
 }

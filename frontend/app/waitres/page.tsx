@@ -5,76 +5,7 @@ import MenuCard, { MenuItem } from "@/app/waitres/MenuCard";
 import Cart, { CartItem } from "@/app/waitres/Cart";
 import Link from "next/link";
 
-const menu: MenuItem[] = [
-  {
-    id: 1,
-    name: "Croissant",
-    category: "Roti & Pastry",
-    price: 30000,
-    image:
-      "https://static01.nyt.com/images/2021/04/07/dining/06croissantsrex1/merlin_184841898_ccc8fb62-ee41-44e8-9ddf-b95b198b88db-jumbo.jpg",
-  },
-  {
-    id: 2,
-    name: "Chocolate Cake",
-    category: "Kue & Cake",
-    price: 45000,
-    image:
-      "https://lilluna.com/wp-content/uploads/2019/01/Chocolate-Cake103.jpg",
-  },
-  {
-    id: 3,
-    name: "Espresso",
-    category: "Minuman",
-    price: 20000,
-    image:
-      "https://img.magnific.com/premium-photo/high-resolution-image-freshly-brewed-cup-espresso-with-creamy-crema-layer_1264082-26795.jpg?w=996",
-  },
-  {
-    id: 4,
-    name: "Baguette",
-    category: "Roti & Pastry",
-    price: 28000,
-    image:
-      "https://latelierdespains.fr/wp-content/uploads/2023/11/baguette-courte_Atelier-des-pains_1.jpg    ",
-  },
-  {
-    id: 5,
-    name: "Red Velvet",
-    category: "Kue & Cake",
-    price: 40000,
-    image:
-      "https://www.mommyplates.com/wp-content/uploads/2025/05/Red-Velvet-Cake.webp",
-  },
-  {
-    id: 6,
-    name: "Cappuccino",
-    category: "Minuman",
-    price: 25000,
-    image:
-      "https://tse4.mm.bing.net/th/id/OIP.sORUCLQs6IFavbrcEWRPgAHaE8?pid=Api&P=0&h=180",
-  },
-  {
-    id: 7,
-    name: "Danish Pastry",
-    category: "Roti & Pastry",
-    price: 32000,
-    image:
-      "https://tse1.mm.bing.net/th/id/OIP.tPkgAvgXjtG-R1fQNlm8ywHaEK?pid=Api&P=0&h=180",
-  },
-  {
-    id: 8,
-    name: "Brownies",
-    category: "Kue & Cake",
-    price: 35000,
-    image:
-      "https://www.glorioustreats.com/wp-content/uploads/2022/09/cheesecake-brownie-recipe-square.jpeg",
-  },
-];
-
 const categories = ["Semua", "Roti & Pastry", "Kue & Cake", "Minuman"];
-const tables = Array.from({ length: 20 }, (_, index) => index + 1);
-const occupiedTables = [5, 10, 15, 20];
 const actorName = "Ayu";
 const actorRole = "Waitres";
 
@@ -85,14 +16,49 @@ export default function WaitresPage() {
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [tableNumber, setTableNumber] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [occupiedTables, setOccupiedTables] = useState<number[]>([]);
+  const [tables, setTables] = useState<any[]>([]);
+  const [menu, setMenu] = useState<MenuItem[]>([]);
+  const categoryMap: Record<number, string> = {
+    1: "Roti & Pastry",
+    2: "Kue & Cake",
+    3: "Minuman",
+  };
+
+  const loadProducts = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/products");
+      const data = await res.json();
+
+      const formattedMenu = data.map((item: any) => ({
+        id: item.product_id,
+        name: item.name,
+        category: categoryMap[item.category_id] || "Lainnya",
+        price: Number(item.price),
+        stock: Number(item.stock),
+        image: item.image
+          ? `http://127.0.0.1:8000/storage/${item.image}`
+          : "/no-image.png",
+      }));
+
+      setMenu(formattedMenu);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   useEffect(() => {
+    loadProducts();
+    loadTables();
+    loadOccupiedTables();
+
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
 
     handleResize();
     window.addEventListener("resize", handleResize);
+
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
@@ -100,12 +66,38 @@ export default function WaitresPage() {
     ? `Meja ${tableNumber}`
     : "Belum dipilih";
 
-  const filteredMenu = menu.filter((item) => {
+  const loadTables = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/tables");
+      const data = await res.json();
+
+      console.log("TABLE DATA", data);
+
+      setTables(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  const loadOccupiedTables = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/occupied-tables");
+
+      const data = await res.json();
+
+      setOccupiedTables(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const filteredMenu = menu.filter((item: any) => {
     const matchesCategory =
       selectedCategory === "Semua" || item.category === selectedCategory;
+
     const matchesSearch = item.name
       .toLowerCase()
       .includes(search.toLowerCase());
+
     return matchesCategory && matchesSearch;
   });
 
@@ -141,22 +133,40 @@ export default function WaitresPage() {
     setCart([]);
   };
 
-  const sendToKasir = () => {
+  const sendToKasir = async () => {
     if (!tableNumber || cart.length === 0) return;
 
-    const order = {
-      tableNumber,
-      items: cart,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          table_id: tableNumber,
+          items: cart.map((item) => ({
+            product_id: item.id,
+            quantity: item.qty,
+          })),
+        }),
+      });
 
-    if (typeof window !== "undefined") {
-      localStorage.setItem("waitresOrder", JSON.stringify(order));
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message);
+        return;
+      }
+
+      alert("Pesanan berhasil dibuat");
+      setCart([]);
+      router.push("/kasir");
+    } catch (error) {
+      console.error(error);
+      alert("Gagal membuat pesanan");
     }
-
-    router.push("/kasir");
   };
-
+  console.log("TABLES =", tables);
   return (
     <>
       {/* Top Navbar */}
@@ -170,17 +180,17 @@ export default function WaitresPage() {
               </h1>
             </div>
             <div className="flex items-center gap-4">
-          <div className="flex items-center gap-4">
-            <button className="text-sm text-amber-100 hover:text-white transition">
-              👤 waitres
-            </button>
-            <Link
-              href="/login"
-              className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition"
-            >
-              Logout
-            </Link>
-          </div>
+              <div className="flex items-center gap-4">
+                <button className="text-sm text-amber-100 hover:text-white transition">
+                  👤 waitres
+                </button>
+                <Link
+                  href="/login"
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition"
+                >
+                  Logout
+                </Link>
+              </div>
               {/*<div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-600 text-white font-semibold">
                 {actorName.charAt(0)}
               </div> */}
@@ -196,16 +206,29 @@ export default function WaitresPage() {
             Pilih meja terlebih dahulu sebelum melakukan order
           </p>
 
-          <div className="grid grid-cols-4 gap-3">
-            {Array.from({ length: 20 }, (_, i) => i + 1).map((table) => (
-              <button
-                key={table}
-                onClick={() => setTableNumber(table)}
-                className="border rounded-lg py-3 text-sm font-medium hover:bg-orange-100"
-              >
-                {table}
-              </button>
-            ))}
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            {tables.map((table) => {
+              const occupied = occupiedTables.includes(table.table_id);
+              const selected = tableNumber === table.table_id;
+
+              return (
+                <button
+                  key={table.table_id}
+                  type="button"
+                  onClick={() => !occupied && setTableNumber(table.table_id)}
+                  disabled={occupied}
+                  className={`rounded-lg py-2 text-xs font-semibold transition ${
+                    occupied
+                      ? "bg-red-100 text-red-600 border border-red-300 cursor-not-allowed"
+                      : selected
+                        ? "bg-orange-500 text-white border border-orange-600"
+                        : "bg-white border border-gray-300 hover:bg-orange-100"
+                  }`}
+                >
+                  Meja {table.table_number}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -248,7 +271,7 @@ export default function WaitresPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {filteredMenu.map((item) => (
+                {filteredMenu.map((item: any) => (
                   <MenuCard
                     key={item.id}
                     item={item}
@@ -268,13 +291,15 @@ export default function WaitresPage() {
                 </p>
                 <div className="mt-3 grid grid-cols-4 gap-2">
                   {tables.map((table) => {
-                    const occupied = occupiedTables.includes(table);
-                    const selected = tableNumber === table;
+                    const occupied = occupiedTables.includes(table.table_id);
+                const selected = tableNumber === table.table_id;
                     return (
                       <button
-                        key={table}
+                        key={table.table_id}
                         type="button"
-                        onClick={() => !occupied && setTableNumber(table)}
+                        onClick={() =>
+                          !occupied && setTableNumber(table.table_id)
+                        }
                         disabled={occupied}
                         className={`rounded-lg py-2 text-xs font-semibold transition ${
                           occupied
@@ -284,7 +309,7 @@ export default function WaitresPage() {
                               : "bg-white border border-gray-300 hover:bg-orange-100"
                         }`}
                       >
-                        {table}
+                        {table.table_number}
                       </button>
                     );
                   })}

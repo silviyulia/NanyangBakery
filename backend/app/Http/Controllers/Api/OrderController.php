@@ -4,20 +4,23 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller; 
 use App\Models\Order;
 use App\Models\Table;
+use App\Models\Product;
+use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
     // GET /api/orders
-    public function index()
-    {
-        $orders = Order::with(['table', 'waitres', 'items'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-        
-        return response()->json($orders);
-    }
+public function index()
+{
+    $orders = Order::with(['table', 'waitres', 'items'])
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    return response()->json($orders);
+}
 
     // GET /api/orders?table_id=1&status=pending
     public function filter(Request $request)
@@ -52,24 +55,62 @@ class OrderController extends Controller
     }
 
     // POST /api/orders
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'table_id' => 'required|exists:tables,table_id',
-            'waitres_id' => 'required|exists:users,user_id',
-            'notes' => 'nullable|string',
-        ]);
+   public function store(Request $request)
+{
+    $request->validate([
+        'table_id' => 'required|exists:tables,table_id',
+        'items' => 'required|array|min:1',
+    ]);
+
+    DB::beginTransaction();
+
+    try {
 
         $order = Order::create([
-            'table_id' => $validated['table_id'],
-            'waitres_id' => $validated['waitres_id'],
+            'table_id' => $request->table_id,
+            'total_amount' => 0,
             'status' => 'pending',
-            'total_price' => 0,
-            'notes' => $validated['notes'] ?? null,
         ]);
 
-        return response()->json($order, 201);
+        $total = 0;
+
+        foreach ($request->items as $item) {
+
+            $product = Product::findOrFail($item['product_id']);
+
+            $subtotal = $product->price * $item['quantity'];
+
+            OrderItem::create([
+                'order_id' => $order->id,
+                'product_id' => $product->product_id,
+                'quantity' => $item['quantity'],
+                'price' => $product->price,
+                'subtotal' => $subtotal,
+            ]);
+
+            $total += $subtotal;
+        }
+
+        $order->update([
+            'total_amount' => $total
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'message' => 'Pesanan berhasil dibuat',
+            'order' => $order
+        ], 201);
+
+    } catch (\Exception $e) {
+
+        DB::rollBack();
+
+        return response()->json([
+            'message' => $e->getMessage()
+        ], 500);
     }
+}
 
     // PUT /api/orders/{id}
     public function update(Request $request, $id)
@@ -114,7 +155,7 @@ class OrderController extends Controller
     public function getTableActiveOrder($table_id)
     {
         $order = Order::where('table_id', $table_id)
-            ->whereIn('status', ['pending', 'confirmed'])
+            ->whereIn('status', ['pending', 'proses'])
             ->with(['items.product', 'waitres'])
             ->first();
 
@@ -124,4 +165,12 @@ class OrderController extends Controller
 
         return response()->json($order);
     }
+public function occupiedTables()
+{
+    $tables = Order::whereIn('status', ['pending', 'proses'])
+        ->pluck('table_id');
+
+    return response()->json($tables);
+}
+
 }

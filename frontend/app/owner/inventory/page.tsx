@@ -401,7 +401,7 @@ const handleInputStock = async () => {
                               }}
                               className="font-medium text-orange-600 hover:underline"
                             >
-                              Input Stok
+                              tambah jumlah
                             </button>
                           </td>
                         </tr>

@@ -32,6 +32,8 @@ Route::get('/orders/{id}', [OrderController::class, 'show']);
 Route::put('/orders/{id}', [OrderController::class, 'update']);
 Route::delete('/orders/{id}', [OrderController::class, 'destroy']);
 Route::get('/orders/table/{table_id}/active', [OrderController::class, 'getTableActiveOrder']);
+Route::get('/occupied-tables', [OrderController::class, 'occupiedTables']);
+
 
 use App\Http\Controllers\Api\TransactionController;
 Route::get('/transactions', [TransactionController::class, 'index']);
@@ -68,4 +70,5 @@ Route::get('/recipes', [RecipeController::class,'index']);
 Route::post('/recipes', [RecipeController::class,'store']);
 Route::put('/recipes/{id}', [RecipeController::class,'update']);
 Route::delete('/recipes/{id}', [RecipeController::class,'destroy']);
+
 

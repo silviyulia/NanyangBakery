@@ -10,11 +10,14 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 class TableController extends Controller
 {
     // GET /api/tables
-    public function index()
-    {
-        $tables = Table::with(['orders'])->orderBy('table_number', 'asc')->get();
-        return response()->json($tables);
-    }
+public function index()
+{
+    return Table::with('orders')
+        ->orderBy('table_number', 'asc')
+        ->get();
+
+        return Table::orderBy('table_number')->get();
+}
 
     // GET /api/tables/{id}
     public function show($id)

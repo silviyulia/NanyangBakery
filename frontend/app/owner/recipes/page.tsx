@@ -122,8 +122,16 @@ export default function RecipesPage() {
           item.ingredient_id && item.quantity && Number(item.quantity) > 0,
       );
 
-      const res = await fetch("http://127.0.0.1:8000/api/recipes", {
-        method: "POST",
+      let url = "http://127.0.0.1:8000/api/recipes";
+      let method = "POST";
+
+      if (editMode) {
+        url = `http://127.0.0.1:8000/api/recipes/${editRecipeId}`;
+        method = "PUT";
+      }
+
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
@@ -144,18 +152,13 @@ export default function RecipesPage() {
         return;
       }
 
-      alert("Resep berhasil ditambahkan");
+      alert(
+        editMode ? "Resep berhasil diupdate" : "Resep berhasil ditambahkan",
+      );
 
+      setEditMode(false);
+      setEditRecipeId(null);
       setShowModal(false);
-      setSelectedProduct("");
-
-      setIngredients([
-        {
-          ingredient_id: "",
-          quantity: "",
-          unit: "",
-        },
-      ]);
 
       loadRecipes();
     } catch (error) {
@@ -250,7 +253,9 @@ export default function RecipesPage() {
               {/* MODAL */}
               <div className="relative bg-white w-full max-w-lg rounded-2xl shadow-lg p-6 z-10">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-bold">Tambah Resep</h3>
+                  <h3 className="text-lg font-bold">
+                    {editMode ? "Edit Resep" : "Tambah Resep"}
+                  </h3>
 
                   <button
                     onClick={() => {
