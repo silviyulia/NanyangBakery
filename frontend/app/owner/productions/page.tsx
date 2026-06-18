@@ -124,37 +124,59 @@ export default function ProductionPage() {
     setProductId(String(item.product_id));
     setQuantity(String(item.quantity_produced));
   };
+
   const handleDelete = async (id: number) => {
-    if (!confirm("Yakin hapus data produksi?")) return;
+  const ok = confirm(`yakin ingin menghapus ini?`);
 
-    try {
-      await fetch(`http://127.0.0.1:8000/api/productions/${id}`, {
+  console.log("Confirm =", ok);
+
+  if (!ok) return;
+
+  try {
+    console.log("Mulai DELETE");
+
+    const response = await fetch(
+      `http://127.0.0.1:8000/api/productions/${id}`,
+      {
         method: "DELETE",
-      });
+        headers: {
+          Accept: "application/json",
+        },
+      }
+    );
 
-      await loadProductions();
-    } catch (error) {
-      console.error(error);
-    }
-  };
+    console.log("Status =", response.status);
+
+    const text = await response.text();
+
+    console.log("Response =", text);
+
+    await loadProductions();
+
+    alert("Selesai");
+  } catch (err) {
+    console.error("ERROR DELETE:", err);
+    alert("Error saat delete");
+  }
+};
+
   const handleLogout = () => {
     localStorage.removeItem("user");
     router.push("/login");
   };
 
-const [inventory, setInventory] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<any[]>([]);
 
-useEffect(() => {
-  fetch("http://127.0.0.1:8000/api/inventory")
-    .then((res) => res.json())
-    .then((data) => setInventory(data))
-    .catch(console.error);
-}, []);
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/inventory")
+      .then((res) => res.json())
+      .then((data) => setInventory(data))
+      .catch(console.error);
+  }, []);
 
-const lowStockItems = inventory.filter(
-  (item) =>
-    Number(item.qty) <= Number(item.minimum_stock)
-);
+  const lowStockItems = inventory.filter(
+    (item) => Number(item.qty) <= Number(item.minimum_stock),
+  );
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -215,9 +237,9 @@ const lowStockItems = inventory.filter(
             <h2 className="text-3xl font-bold">Dashboard Monitoring</h2>
           </div>
           <div className="flex items-center gap-4">
-<button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
-  🔔 Notifikasi ({lowStockItems.length})
-</button>
+            <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
+              🔔 Notifikasi ({lowStockItems.length})
+            </button>
             <div className="flex items-center gap-2 bg-amber-500 bg-opacity-20 px-4 py-2 rounded-lg">
               <User size={20} />
               <div>
@@ -363,20 +385,22 @@ const lowStockItems = inventory.filter(
                           item.production_date.replace(" ", "T"),
                         ).toLocaleString("id-ID")}
                       </td>
-                      <td className="p-3 flex gap-2">
-                        <button
-                          onClick={() => handleEdit(item)}
-                          className="bg-yellow-500 text-white px-2 py-1 rounded"
-                        >
-                          Edit
-                        </button>
+                     <td className="p-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEdit(item)}
+                            className="bg-yellow-500 text-white px-2 py-1 rounded"
+                          >
+                            Edit
+                          </button>
 
-                        <button
-                          onClick={() => handleDelete(item.production_id)}
-                          className="bg-red-500 text-white px-2 py-1 rounded"
-                        >
-                          Hapus
-                        </button>
+                          <button
+                            onClick={() => handleDelete(item.production_id)}
+                            className="bg-red-500 text-white px-2 py-1 rounded"
+                          >
+                            Hapus
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

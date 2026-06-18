@@ -11,13 +11,50 @@ class ProductController extends Controller
 {
 
     // Read all products
-    public function index()
-    {
-        $products = DB::table('products')->get();
+public function index()
+{
+    $products = DB::table('products')
 
-        return response()->json($products);
-    }
+        ->leftJoinSub(
+            DB::table('productions')
+                ->select(
+                    'product_id',
+                    DB::raw('SUM(quantity_produced) as total_produced')
+                )
+                ->groupBy('product_id'),
+            'p',
+            'products.product_id',
+            '=',
+            'p.product_id'
+        )
 
+        ->leftJoinSub(
+            DB::table('order_items')
+                ->select(
+                    'product_id',
+                    DB::raw('SUM(quantity) as total_sold')
+                )
+                ->groupBy('product_id'),
+            'o',
+            'products.product_id',
+            '=',
+            'o.product_id'
+        )
+
+        ->select(
+            'products.*',
+            DB::raw('
+                COALESCE(p.total_produced,0)
+                -
+                COALESCE(o.total_sold,0)
+                as stock
+            ')
+        )
+
+        ->get();
+
+    return response()->json($products);
+}
 
     // Create product
     public function store(Request $request)

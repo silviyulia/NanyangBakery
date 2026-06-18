@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Menu, X, LogOut } from "lucide-react";
 import Link from "next/link";
@@ -21,7 +21,148 @@ export default function RecipesPage() {
   ];
 
   const [showModal, setShowModal] = useState(false);
-const [activeTab, setActiveTab] = useState("Semua");
+  const [activeTab, setActiveTab] = useState("Semua");
+  const [recipes, setRecipes] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [ingredientsMaster, setIngredientsMaster] = useState<any[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState("");
+  const loadProducts = async () => {
+    const res = await fetch("http://127.0.0.1:8000/api/products");
+    const data = await res.json();
+    setProducts(data);
+  };
+
+  const loadIngredients = async () => {
+    const res = await fetch("http://127.0.0.1:8000/api/inventory");
+    const data = await res.json();
+    setIngredientsMaster(data);
+    console.log("INGREDIENTS:", ingredientsMaster);
+  };
+
+  useEffect(() => {
+    loadRecipes();
+    loadProducts();
+    loadIngredients();
+  }, []);
+
+  const loadRecipes = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/recipes");
+
+      const data = await res.json();
+
+      console.log("RECIPES", data);
+
+      setRecipes(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const groupedRecipes: any[] = Object.values(
+    recipes.reduce((acc: any, item: any) => {
+      if (!acc[item.product_id]) {
+        acc[item.product_id] = {
+          product_id: item.product_id,
+          product_name: item.product_name,
+          bahan: [],
+        };
+      }
+
+      acc[item.product_id].bahan.push({
+        ingredient_id: item.ingredient_id,
+        ingredient_name: item.ingredient_name,
+        quantity: item.quantity,
+        unit: item.unit,
+      });
+
+      return acc;
+    }, {}),
+  );
+
+  console.log("recipes", recipes);
+  console.log("groupedRecipes", groupedRecipes);
+
+  const [ingredients, setIngredients] = useState([
+    {
+      ingredient_id: "",
+      quantity: "",
+      unit: "",
+    },
+  ]);
+  const [editMode, setEditMode] = useState(false);
+  const [editRecipeId, setEditRecipeId] = useState<number | null>(null);
+
+  const handleEdit = (recipe: any) => {
+    setEditMode(true);
+    setEditRecipeId(recipe.product_id);
+
+    setSelectedProduct(recipe.product_id.toString());
+
+    setIngredients(
+      recipe.bahan.map((b: any) => ({
+        ingredient_id: b.ingredient_id.toString(),
+        quantity: b.quantity.toString(),
+        unit: b.unit,
+      })),
+    );
+
+    setShowModal(true);
+  };
+
+  const handleSave = async () => {
+    if (!selectedProduct) {
+      alert("Pilih produk terlebih dahulu");
+      return;
+    }
+
+    try {
+      const validIngredients = ingredients.filter(
+        (item) =>
+          item.ingredient_id && item.quantity && Number(item.quantity) > 0,
+      );
+
+      const res = await fetch("http://127.0.0.1:8000/api/recipes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          product_id: Number(selectedProduct),
+          ingredients: validIngredients.map((item) => ({
+            ingredient_id: Number(item.ingredient_id),
+            quantity: Number(item.quantity),
+          })),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(JSON.stringify(data));
+        return;
+      }
+
+      alert("Resep berhasil ditambahkan");
+
+      setShowModal(false);
+      setSelectedProduct("");
+
+      setIngredients([
+        {
+          ingredient_id: "",
+          quantity: "",
+          unit: "",
+        },
+      ]);
+
+      loadRecipes();
+    } catch (error) {
+      console.error(error);
+      alert("Gagal menyimpan resep");
+    }
+  };
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -100,7 +241,6 @@ const [activeTab, setActiveTab] = useState("Semua");
             </button>
           </div>
 
-
           {showModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center">
               <div
@@ -113,7 +253,16 @@ const [activeTab, setActiveTab] = useState("Semua");
                   <h3 className="text-lg font-bold">Tambah Resep</h3>
 
                   <button
-                    onClick={() => setShowModal(false)}
+                    onClick={() => {
+                      setShowModal(false);
+                      setIngredients([
+                        {
+                          ingredient_id: "",
+                          quantity: "",
+                          unit: "",
+                        },
+                      ]);
+                    }}
                     className="text-gray-400 hover:text-black text-xl"
                   >
                     ✖
@@ -121,41 +270,87 @@ const [activeTab, setActiveTab] = useState("Semua");
                 </div>
                 {/* FORM */}
                 <div className="space-y-4">
-                  <input
-                    type="text"
-                    placeholder="Nama produk"
+                  <select
+                    value={selectedProduct}
+                    onChange={(e) => setSelectedProduct(e.target.value)}
                     className="w-full border px-3 py-2 rounded-lg"
-                  />
-                  <select className="w-full border px-3 py-2 rounded-lg">
-                    <option>Roti&Pastry</option>
-                    <option>Kue&Cake</option>
-                    <option>Minuman</option>
-                  </select>
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        placeholder="Nama bahan"
-                        className="flex-1 border px-3 py-2 rounded-lg"
-                      />
-                      <input
-                        placeholder="Jumlah"
-                        className="flex-1 border px-3 py-2 rounded-lg"
-                      />
-                    </div>
+                  >
+                    <option value="">Pilih Produk</option>
 
-                    <div className="flex gap-2">
-                      <input
-                        placeholder="Nama bahan"
-                        className="flex-1 border px-3 py-2 rounded-lg"
-                      />
-                      <input
-                        placeholder="Jumlah"
-                        className="flex-1 border px-3 py-2 rounded-lg"
-                      />
-                    </div>
+                    {products.map((product) => (
+                      <option
+                        key={product.product_id}
+                        value={product.product_id}
+                      >
+                        {product.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="space-y-3">
+                    {ingredients.map((item, index) => (
+                      <div key={index} className="flex gap-2">
+                        <select
+                          value={item.ingredient_id}
+                          onChange={(e) => {
+                            const updated = [...ingredients];
+                            updated[index].ingredient_id = e.target.value;
+                            setIngredients(updated);
+                          }}
+                          className="flex-1 border px-3 py-2 rounded-lg"
+                        >
+                          <option value="">Pilih Bahan</option>
+
+                          {ingredientsMaster.map((bahan) => (
+                            <option
+                              key={bahan.ingredient_id}
+                              value={bahan.ingredient_id}
+                            >
+                              {bahan.ingredient_name}
+                            </option>
+                          ))}
+                        </select>
+
+                        <div className="flex items-center border rounded-lg overflow-hidden">
+                          <input
+                            type="number"
+                            placeholder="Jumlah"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const updated = [...ingredients];
+                              updated[index].quantity = e.target.value;
+                              setIngredients(updated);
+                            }}
+                            className="w-24 px-3 py-2 outline-none"
+                          />
+                          <input
+                            type="text"
+                            value={item.unit}
+                            onChange={(e) => {
+                              const updated = [...ingredients];
+                              updated[index].unit = e.target.value;
+                              setIngredients(updated);
+                            }}
+                            className="w-20 px-2 py-2 border-l"
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
-                  <button className="text-orange-500 text-sm">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setIngredients([
+                        ...ingredients,
+                        {
+                          ingredient_id: "",
+                          quantity: "",
+                          unit: "",
+                        },
+                      ])
+                    }
+                    className="text-orange-500 text-sm"
+                  >
                     + Tambah bahan
                   </button>
                 </div>
@@ -167,11 +362,16 @@ const [activeTab, setActiveTab] = useState("Semua");
                     Batal
                   </button>
 
-                  <button className="bg-orange-500 text-white px-4 py-2 rounded-lg">
+                  <button
+                    onClick={() => {
+                      console.log("BUTTON CLICK");
+                      handleSave();
+                    }}
+                    className="bg-orange-500 text-white px-4 py-2 rounded-lg"
+                  >
                     Simpan
                   </button>
                 </div>
-
               </div>
             </div>
           )}
@@ -195,78 +395,49 @@ const [activeTab, setActiveTab] = useState("Semua");
 
           {/* GRID */}
           <div className="grid md:grid-cols-2 gap-6">
-
-            {/* CARD */}
-            {[{
-              name: "Croissant",
-              category: "Roti&Pastry",
-              image: "🥐",
-              bahan: [
-                ["Tepung terigu", "60 gram"],
-                ["Margarin", "25 gram"],
-                ["Ragi instan", "5 gram"],
-                ["Garam", "12 gram"],
-                ["Gula pasir", "10 gram"],
-                ["Susu cair", "50 ml"],
-                ["Telur", "1 butir (60 gram)"],
-              ],
-            },
-            {
-              name: "Red Velvet",
-              category: "Kue&Cake",
-              image: "🍰",
-              bahan: [
-                ["Tepung terigu", "260 gram"],
-                ["Margarin", "115 gram"],
-                ["Bubuk kakao", "20 gram"],
-                ["Garam", "12 gram"],
-                ["Gula pasir", "250 gram"],
-                ["Susu cair", "240 ml"],
-                ["Telur", "2 butir (120 gram)"],
-              ],
-            }].map((item, i) => (
-
-              <div key={i} className="bg-white rounded-2xl shadow border overflow-hidden">
-
-                {/* HEADER CARD */}
+            {(groupedRecipes as any[]).map((item: any, i: number) => (
+              <div
+                key={i}
+                className="bg-white rounded-2xl shadow border overflow-hidden"
+              >
                 <div className="flex justify-between items-center p-4 bg-orange-100">
-                  <div className="flex items-center gap-3">
-                    <div className="text-3xl">{item.image}</div>
-                    <div>
-                      <h3 className="font-bold text-lg">{item.name}</h3>
-                      <p className="text-sm text-gray-600">{item.category}</p>
-                    </div>
+                  <div>
+                    <h3 className="font-bold text-lg">{item.product_name}</h3>
                   </div>
-
-                  <button className="bg-gray-300 px-4 py-1 rounded-full text-sm">
+                  <button
+                    onClick={() => {
+                      console.log(item);
+                      handleEdit(item);
+                    }}
+                    className="bg-gray-300 px-4 py-1 rounded-full text-sm"
+                  >
                     Edit
                   </button>
                 </div>
 
-                {/* BODY */}
                 <div className="p-4">
                   <p className="text-sm mb-3 font-medium">
                     Komposisi per 1 unit:
                   </p>
 
                   <div className="space-y-2">
-                    {item.bahan.map((b, idx) => (
-                      <div key={idx} className="flex justify-between bg-gray-100 px-3 py-2 rounded">
-                        <span>{b[0]}</span>
-                        <span>{b[1]}</span>
+                    {item.bahan.map((b: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="flex justify-between bg-gray-100 px-3 py-2 rounded"
+                      >
+                        <span>{b.ingredient_name}</span>
+
+                        <span>
+                          {b.quantity} {b.unit}
+                        </span>
                       </div>
                     ))}
                   </div>
-
-                  <p className="text-xs text-gray-500 mt-3">
-                    Max unit : 50
-                  </p>
                 </div>
-
               </div>
             ))}
           </div>
-
         </main>
       </div>
     </div>

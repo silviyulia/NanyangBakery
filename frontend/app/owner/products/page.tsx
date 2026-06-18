@@ -549,7 +549,6 @@ export default function ProductsPage() {
                   Rp {Number(p.price).toLocaleString("id-ID")}
                 </p>
 
-                {p.stock !== "-" && (
                   <span
                     className={`inline-block mt-2 px-2 py-1 rounded text-xs font-semibold ${
                       Number(p.stock) <= 5
@@ -559,17 +558,23 @@ export default function ProductsPage() {
                   >
                     Stok: {p.stock}
                   </span>
-                )}
+                  
+                  {Number(p.stock) <= 0 && (
+                    <div className="mt-2 bg-red-500 text-white text-center py-1 rounded text-xs font-bold">
+                      STOK HABIS
+                    </div>
+                  )}
 
-                <span
-                  className={`text-xs px-2 py-1 rounded mt-2 inline-block ${
-                    p.status === "active"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-red-100 text-red-600"
-                  }`}
-                >
-                  {p.status}
-                </span>
+                  <span
+                    className={`text-xs px-2 py-1 rounded mt-2 inline-block ${
+                      p.status === "active"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-600"
+                    }`}
+                  >
+                    {p.status}
+                  </span>
+                
                 {/* BUTTON */}
                 <div className="flex gap-2 mt-3">
                   <button

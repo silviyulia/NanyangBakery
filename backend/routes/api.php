@@ -50,9 +50,11 @@ Route::get('/reports/orders', [ReportController::class, 'orders']);
 
 use App\Http\Controllers\Api\ProductionController;
 Route::get('/productions', [ProductionController::class, 'index']);
+Route::get('/productions/{id}', [ProductionController::class, 'index']);
+Route::put('/productions/{id}', [ProductionController::class, 'update']);
 Route::post('/productions', [ProductionController::class, 'store']);
 Route::get('/productions/today', [ProductionController::class, 'today']);
-Route::delete('/production/{id}' , [ProductionController::class, 'destroy']);
+Route::delete('/productions/{id}', [ProductionController::class, 'destroy']);
 
 use App\Http\Controllers\Api\InventoryController;
 Route::get('/inventory', [InventoryController::class, 'index']);
@@ -60,3 +62,10 @@ Route::post('/inventory', [InventoryController::class, 'store']);
 Route::put('/inventory/{id}', [InventoryController::class, 'update']);
 Route::delete('/inventory/{id}', [InventoryController::class, 'destroy']);
 Route::put('/inventory/{id}/stock', [InventoryController::class, 'updateStock']);
+
+use App\Http\Controllers\Api\RecipeController;
+Route::get('/recipes', [RecipeController::class,'index']);
+Route::post('/recipes', [RecipeController::class,'store']);
+Route::put('/recipes/{id}', [RecipeController::class,'update']);
+Route::delete('/recipes/{id}', [RecipeController::class,'destroy']);
+
