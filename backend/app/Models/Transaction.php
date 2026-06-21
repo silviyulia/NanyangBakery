@@ -12,29 +12,27 @@ class Transaction extends Model
     use HasFactory;
 
     protected $table = 'transactions';
-    protected $primaryKey = 'transaction_id';
-    public $incrementing = true;
-    protected $keyType = 'bigint';
 
-    protected $fillable = [
-        'order_id',
-        'kasir_id',
-        'session_id',
-        'total_amount',
-        'payment_method',
-        'payment_status',
-        'amount_paid',
-        'change_amount',
-        'reference_number',
-        'notes',
-    ];
+    protected $primaryKey = 'transaction_id';
+
+    public $incrementing = true;
+
+protected $fillable = [
+    'order_id',
+    'kasir_id',
+    'session_id',
+    'total_amount',
+    'payment_method',
+    'payment_status',
+    'amount_paid',
+    'change_amount',
+    'reference_number'
+];
 
     protected $casts = [
         'total_amount' => 'decimal:2',
         'amount_paid' => 'decimal:2',
         'change_amount' => 'decimal:2',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
     ];
 
     /**
@@ -42,7 +40,7 @@ class Transaction extends Model
      */
     public function order(): BelongsTo
     {
-        return $this->belongsTo(Order::class, 'order_id', 'order_id');
+        return $this->belongsTo(Order::class, 'order_id', 'id');
     }
 
     /**

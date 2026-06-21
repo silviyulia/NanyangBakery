@@ -16,17 +16,28 @@ import Link from "next/link";
 
 // 🔹 TYPE
 type Order = {
-  order_id: string;
+  id: number;
   table_id: number;
   status: "pending" | "confirmed" | "completed" | "cancelled";
-  waitres?: { name: string; user_id?: number };
-  total_price: number;
-  order_items?: {
+
+  waitres?: {
+    name: string;
+    user_id?: number;
+  } | null;
+
+  total_amount: string;
+
+  items: {
+    id: number;
     product_id: number;
-    product?: { name: string };
     quantity: number;
-    price: number;
+    price: string;
+
+    product?: {
+      name: string;
+    };
   }[];
+
   created_at: string;
   updated_at?: string;
 };
@@ -35,9 +46,6 @@ export default function OrdersPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeFilter, setActiveFilter] = useState("semua");
-  const formatRupiah = (value: number) => {
-    return new Intl.NumberFormat("id-ID").format(value);
-  };
 
   const menuItems = [
     { name: "Dashboard", icon: "📊", href: "/owner" },
@@ -85,13 +93,6 @@ export default function OrdersPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/orders")
-      .then((res) => res.json())
-      .then((data) => setOrders(data))
-      .catch((err) => console.error(err));
   }, []);
 
   const filteredOrders = orders.filter(
@@ -150,19 +151,18 @@ export default function OrdersPage() {
     return `${minutes}m ${seconds}s`;
   };
 
-const [inventory, setInventory] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<any[]>([]);
 
-useEffect(() => {
-  fetch("http://127.0.0.1:8000/api/inventory")
-    .then((res) => res.json())
-    .then((data) => setInventory(data))
-    .catch(console.error);
-}, []);
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/inventory")
+      .then((res) => res.json())
+      .then((data) => setInventory(data))
+      .catch(console.error);
+  }, []);
 
-const lowStockItems = inventory.filter(
-  (item) =>
-    Number(item.qty) <= Number(item.minimum_stock)
-);
+  const lowStockItems = inventory.filter(
+    (item) => Number(item.qty) <= Number(item.minimum_stock),
+  );
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -224,9 +224,9 @@ const lowStockItems = inventory.filter(
             <h2 className="text-3xl font-bold">Dashboard Monitoring</h2>
           </div>
           <div className="flex items-center gap-4">
-<button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
-  🔔 Notifikasi ({lowStockItems.length})
-</button>
+            <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
+              🔔 Notifikasi ({lowStockItems.length})
+            </button>
             <div className="flex items-center gap-2 bg-amber-500 bg-opacity-20 px-4 py-2 rounded-lg">
               <User size={20} />
               <div>
@@ -238,7 +238,6 @@ const lowStockItems = inventory.filter(
         </header>
 
         {/* CONTENT */}
-        {/* Main Content Area */}
         <main className="flex-1 overflow-auto p-8">
           <div className="mb-8 grid grid-cols-1 gap-3 md:grid-cols-3">
             <div className="rounded-3xl border border-orange-100 bg-white p-4 shadow-sm">
@@ -340,19 +339,17 @@ const lowStockItems = inventory.filter(
             {filteredOrders.length > 0 ? (
               filteredOrders.map((order) => (
                 <div
-                  key={order.order_id}
+                  key={order.id}
                   className="bg-white rounded-xl shadow border overflow-hidden"
                 >
                   {/* HEADER CARD */}
-                  <div className="bg-orange-50 p-4 border-b">
+                  <div className="bg-orange-100 p-4 border-b">
                     <div className="flex justify-between items-start">
                       <div>
                         <span className="bg-orange-500 text-white px-3 py-1 rounded text-sm">
                           Meja {order.table_id}
                         </span>
-                        <h3 className="font-bold mt-2">
-                          Order #{order.order_id}
-                        </h3>
+                        <h3 className="font-bold mt-2">Order #{order.id}</h3>
 
                         {/* 🕒 WAKTU */}
                         <div className="text-xs text-gray-600 mt-1 space-y-1">
@@ -371,18 +368,33 @@ const lowStockItems = inventory.filter(
 
                   {/* BODY */}
                   <div className="p-4">
-                    <div className="max-h-40 overflow-y-auto border-b pb-3">
-                      {order.order_items && order.order_items.length > 0 ? (
-                        <ul className="space-y-2 text-sm">
-                          {order.order_items.map((item, idx) => (
-                            <li key={idx} className="flex justify-between">
-                              <span>
-                                {item.quantity}x{" "}
-                                {item.product?.name || "Produk"}
-                              </span>
-                              <span>
-                                Rp {item.price.toLocaleString("id-ID")}
-                              </span>
+                    {/* LIST ITEM */}
+                    <div className="border-b pb-3">
+                      {order.items && order.items.length > 0 ? (
+                        <ul className="space-y-3 text-sm">
+                          {order.items.map((item) => (
+                            <li
+                              key={item.id}
+                              className="flex justify-between items-center"
+                            >
+                              <div>
+                                <p className="font-medium">
+                                  {item.quantity}x{" "}
+                                  {item.product?.name || "Produk"}
+                                </p>
+
+                                <p className="text-xs text-gray-500">
+                                  Rp{" "}
+                                  {Number(item.price).toLocaleString("id-ID")}
+                                </p>
+                              </div>
+
+                              <p className="font-semibold text-gray-700">
+                                Rp{" "}
+                                {Number(
+                                  Number(item.price) * item.quantity,
+                                ).toLocaleString("id-ID")}
+                              </p>
                             </li>
                           ))}
                         </ul>
@@ -391,55 +403,25 @@ const lowStockItems = inventory.filter(
                       )}
                     </div>
 
-                    <div className="mt-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-semibold text-gray-700">
-                          Total:
-                        </span>
-                        <span className="font-bold text-lg text-orange-600">
-                          Rp {order.total_price.toLocaleString("id-ID")}
-                        </span>
-                      </div>
+                    {/* TOTAL */}
+                    <div className="mt-4 flex justify-between items-center">
+                      <span className="font-semibold text-gray-700">Total</span>
 
-                      <div className="text-xs text-gray-600">
-                        <p>Waitres: {order.waitres?.name || "N/A"}</p>
-                      </div>
+                      <span className="font-bold text-lg text-orange-600">
+                        Rp {Number(order.total_amount).toLocaleString("id-ID")}
+                      </span>
                     </div>
-                  </div>
-
-                  {/* ITEMS */}
-                  <div className="p-4 border-b max-h-40 overflow-y-auto">
-                    {order.order_items && order.order_items.length > 0 ? (
-                      <ul className="space-y-2 text-sm">
-                        {order.order_items.map((item, idx) => (
-                          <li key={idx} className="flex justify-between">
-                            <span className="font-medium">
-                              {item.quantity}x {item.product?.name || "Produk"}
-                            </span>
-                            <span className="text-gray-600">
-                              Rp {item.price.toLocaleString("id-ID")}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-gray-500">Tidak ada item</p>
-                    )}
                   </div>
 
                   {/* FOOTER */}
                   <div className="p-4 bg-gray-50">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="font-semibold text-gray-700">
-                        Total:
+                    <p className="text-xs text-gray-600">
+                      Waitres:
+                      <span className="font-semibold">
+                        {" "}
+                        {order.waitres?.name || "N/A"}
                       </span>
-                      <span className="font-bold text-lg text-orange-600">
-                        Rp {order.total_price.toLocaleString("id-ID")}
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-600 mb-3">
-                      <p>Waitres: {order.waitres?.name || "N/A"}</p>
-                    </div>
+                    </p>
                   </div>
                 </div>
               ))

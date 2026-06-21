@@ -14,6 +14,7 @@ export default function WaitresPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
+  const [user, setUser] = useState<any>(null);
   const [tableNumber, setTableNumber] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [occupiedTables, setOccupiedTables] = useState<number[]>([]);
@@ -133,6 +134,13 @@ export default function WaitresPage() {
     setCart([]);
   };
 
+useEffect(() => {
+  const storedUser = localStorage.getItem("user");
+
+  if (storedUser) {
+    setUser(JSON.parse(storedUser));
+  }
+}, []);
   const sendToKasir = async () => {
     if (!tableNumber || cart.length === 0) return;
 
@@ -142,13 +150,14 @@ export default function WaitresPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          table_id: tableNumber,
-          items: cart.map((item) => ({
-            product_id: item.id,
-            quantity: item.qty,
-          })),
-        }),
+body: JSON.stringify({
+  table_id: tableNumber,
+  waitres_id: user.user_id,
+  items: cart.map((item) => ({
+    product_id: item.id,
+    quantity: item.qty,
+  })),
+}),
       });
 
       const data = await res.json();
@@ -160,7 +169,7 @@ export default function WaitresPage() {
 
       alert("Pesanan berhasil dibuat");
       setCart([]);
-      router.push("/kasir");
+      
     } catch (error) {
       console.error(error);
       alert("Gagal membuat pesanan");

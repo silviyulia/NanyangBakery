@@ -23,6 +23,7 @@ class Order extends Model
 
 protected $fillable = [
     'table_id',
+    'waitres_id',
     'status',
     'total_amount',
 ];

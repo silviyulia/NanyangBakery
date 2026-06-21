@@ -1,28 +1,42 @@
 "use client";
 
-import Sidebar from "./components/Sidebar";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import Sidebar from "./components/Sidebar";
 
 type Order = {
-  order_id: string;
-  table_id: string;
-  status: "pending" | "confirmed" | "completed" | "cancelled";
+  id: number;
+  table_id: number;
+  status: string;
   created_at: string;
   updated_at?: string;
-  waitres_id: number;
-  total_price: number;
+  total_amount: string;
+
   items: {
-    order_item_id: string;
-    product_id: string;
+    id: number;
+    product_id: number;
     quantity: number;
-    price: number;
+    price: string;
+    subtotal: string;
+
+    product?: {
+      product_id: number;
+      name: string;
+    };
   }[];
-  table?: { table_number: string };
-  waitres?: { name: string };
+
+  table?: {
+    table_number: number;
+  };
+
+  waitres?: {
+    name: string;
+  };
 };
 
 export default function KasirDashboard() {
+  const router = useRouter();
   const [activeFilter, setActiveFilter] = useState("semua");
   const [now, setNow] = useState(new Date());
   const [orders, setOrders] = useState<Order[]>([]);
@@ -42,9 +56,17 @@ export default function KasirDashboard() {
     const fetchOrders = async () => {
       try {
         setLoading(true);
+
         const res = await fetch("http://127.0.0.1:8000/api/orders");
-        if (!res.ok) throw new Error("Gagal mengambil data pesanan");
+
+        if (!res.ok) {
+          throw new Error("Gagal mengambil data pesanan");
+        }
+
         const data = await res.json();
+
+        console.log("ORDERS =", data);
+
         setOrders(data);
       } catch (error) {
         console.error("Error loading orders:", error);
@@ -55,9 +77,9 @@ export default function KasirDashboard() {
     };
 
     fetchOrders();
-    
-    // Refresh setiap 5 detik
+    //refres setiap 5 detik
     const interval = setInterval(fetchOrders, 5000);
+
     return () => clearInterval(interval);
   }, []);
 
@@ -65,8 +87,7 @@ export default function KasirDashboard() {
     items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const filteredOrders = orders.filter(
-    (order) =>
-      activeFilter === "semua" || order.status === activeFilter,
+    (order) => activeFilter === "semua" || order.status === activeFilter,
   );
 
   const getStatusColor = (status: string) => {
@@ -102,181 +123,205 @@ export default function KasirDashboard() {
   const formatTime = (dateString?: string) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
-    return date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+  const confirmOrder = async (id: number) => {
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/orders/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: "confirmed",
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Gagal konfirmasi");
+      }
+
+      setOrders((prev) =>
+        prev.map((order) =>
+          order.id === id ? { ...order, status: "confirmed" } : order,
+        ),
+      );
+
+      router.push(`/kasir/transaksi?order=${id}`);
+    } catch (error) {
+      console.error(error);
+      alert("Gagal mengkonfirmasi pesanan");
+    }
   };
 
+  console.log("ORDERS =", orders);
+  console.log(
+    "STATUS SAAT RENDER =",
+    orders.map((o) => o.status),
+  );
   return (
-    <div className="min-h-screen bg-[#f4ece7] flex">
-      <Sidebar />
+    <Sidebar>
+      <section className="p-8 bg-[#f6f1ea] min-h-screen">
+        {" "}
+        <div className="mb-8 flex flex-wrap gap-3">
+          {[
+            { label: "Semua", value: "semua" },
+            { label: "Pending", value: "pending" },
+            { label: "Dikonfirmasi", value: "confirmed" },
+            { label: "Selesai", value: "completed" },
+            { label: "Dibatalkan", value: "cancelled" },
+          ].map((filter) => (
+            <button
+              key={filter.value}
+              onClick={() => setActiveFilter(filter.value)}
+              className={`px-5 py-3 rounded-full font-semibold transition ${
+                activeFilter === filter.value
+                  ? "bg-orange-500 text-white shadow-lg"
+                  : "bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200"
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+        {/* INFO */}
+        <div className="mb-6 flex items-center justify-between rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div>
+            <h3 className="text-2xl font-semibold text-[#5c2500]">
+              {loading ? "Loading..." : "Pesanan Terbaru"}
+            </h3>
 
-      {/* Main */}
-      <main className="flex-1">
-        {/* Header tetap */}
-        <header className="bg-[#b65a00] px-8 py-5 flex items-center justify-between shadow-md">
-          <h2 className="text-4xl font-bold text-white">
-            Dashboard Kasir
-          </h2>
-
-          <div className="bg-white rounded-full px-5 py-2 flex items-center gap-3 shadow">
-            <div className="w-10 h-10 rounded-full border flex items-center justify-center">
-              👤
-            </div>
-
-            <div>
-              <p className="font-bold text-[#b65a00] leading-none">
-                kasir
-              </p>
-              <span className="text-sm text-gray-500">System</span>
-            </div>
-          </div>
-        </header>
-
-        {/* Content */}
-        <section className="p-8">
-          {/* FILTER */}
-          <div className="mb-8 flex flex-wrap gap-3">
-            {[
-              { label: "Semua", value: "semua" },
-              { label: "Pending", value: "pending" },
-              { label: "Dikonfirmasi", value: "confirmed" },
-              { label: "Selesai", value: "completed" },
-              { label: "Dibatalkan", value: "cancelled" },
-            ].map((filter) => (
-              <button
-                key={filter.value}
-                onClick={() => setActiveFilter(filter.value)}
-                className={`px-5 py-3 rounded-full font-semibold transition ${
-                  activeFilter === filter.value
-                    ? "bg-orange-500 text-white shadow-lg"
-                    : "bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200"
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
+            <p className="text-gray-600 text-sm">
+              {loading
+                ? "Mengambil data..."
+                : `Total: ${filteredOrders.length} pesanan`}
+            </p>
           </div>
 
-          {/* INFO */}
-          <div className="mb-6 flex items-center justify-between rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
-            <div>
-              <h3 className="text-2xl font-semibold text-[#5c2500]">
-                {loading ? "Loading..." : "Pesanan Terbaru"}
-              </h3>
+          <span className="rounded-full bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-600">
+            {filteredOrders.length} item
+          </span>
+        </div>
+        {/* CARDS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredOrders.map((order) => (
+            <div
+              key={order.id}
+              className="
+  bg-orange-100
+  border border-[#d6c1aa]
+  rounded-3xl
+  overflow-hidden
+  shadow-md
+  hover:shadow-xl
+  transition-all duration-300
+  flex
+  flex-col
+  h-full
+  "
+            >
+              {/* HEADER */}
+              <div className="bg-[#f8efe4] px-5 py-4 border-b border-[#d6c1aa]">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="bg-orange-500 text-white px-3 py-1 rounded-lg text-sm font-semibold">
+                      Meja {order.table?.table_number || order.table_id}
+                    </span>
 
-              <p className="text-gray-600 text-sm">
-                {loading
-                  ? "Mengambil data..."
-                  : `Total: ${filteredOrders.length} pesanan`}
-              </p>
-            </div>
+                    <h3 className="mt-3 text-2xl font-bold text-[#3a2a1a]">
+                      Order {order.id}
+                    </h3>
 
-            <span className="rounded-full bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-600">
-              {filteredOrders.length} item
-            </span>
-          </div>
+                    <p className="text-gray-500 text-sm mt-1">
+                      Masuk: {formatTime(order.created_at)}
+                    </p>
+                  </div>
 
-          {/* CARDS */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredOrders.map((order) => (
-              <div
-                key={order.order_id}
-                className={`bg-white rounded-2xl border border-gray-300 overflow-hidden shadow-sm transition-all duration-300 ease-in-out`}
-              >
-                {/* HEADER CARD */}
-                <div className="bg-[#f2dfbf] p-4 border-b">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <span className={`px-3 py-1 rounded-md text-sm font-bold text-white ${getStatusColor(order.status)}`}>
-                        {order.order_id}
-                      </span>
+                  <span
+                    className={`px-4 py-2 rounded-full text-xs font-semibold ${getStatusColor(
+                      order.status,
+                    )}`}
+                  >
+                    {getStatusLabel(order.status)}
+                  </span>
+                </div>
+              </div>
 
-                      <h3 className="font-bold text-2xl mt-3">
-                        Meja {order.table?.table_number || order.table_id}
-                      </h3>
+              {/* BODY */}
+              <div className="p-4 bg-white flex flex-col flex-1">
+                {" "}
+                <div className="space-y-3 flex-1">
+                  {" "}
+                  {order.items?.map((item, index) => (
+                    <div key={index} className="flex justify-between pb-2">
+                      <div>
+                        <p className="font-medium text-gray-800">
+                          {item.quantity}x {item.product?.name}
+                        </p>
 
-                      <div className="text-sm mt-2 space-y-1">
-                        <p>Masuk: {formatTime(order.created_at)}</p>
-
-                        {order.status === "confirmed" && (
-                          <p className="text-orange-600">
-                            Status: Dikonfirmasi
-                          </p>
-                        )}
-
-                        {order.status === "completed" && (
-                          <p className="text-green-600">
-                            Selesai
-                          </p>
-                        )}
+                        <p className="text-sm text-gray-400">
+                          Rp {Number(item.price).toLocaleString("id-ID")}
+                        </p>
                       </div>
-                    </div>
 
-                    <span
-                      className={`px-4 py-1 rounded-full text-sm font-semibold ${getStatusColor(
-                        order.status,
-                      )}`}
-                    >
-                      {getStatusLabel(order.status)}
+                      <span className="font-bold text-gray-700">
+                        Rp{" "}
+                        {(Number(item.price) * item.quantity).toLocaleString(
+                          "id-ID",
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {/* TOTAL */}
+<div className="mt-auto border-t pt-4">                  <div className="flex justify-between items-center">
+                    <span className="text-2xl font-bold text-gray-700">
+                      Total
+                    </span>
+
+                    <span className="text-xl font-bold text-orange-600">
+                      Rp {Number(order.total_amount).toLocaleString("id-ID")}
                     </span>
                   </div>
                 </div>
-
-                {/* BODY */}
-                <div className="p-4">
-                  <div className="space-y-3 border-b pb-4">
-                    {order.items && order.items.map((item, index) => (
-                      <div
-                        key={index}
-                        className="flex justify-between"
-                      >
-                        <p>
-                          {item.quantity}x Item
-                        </p>
-
-                        <span className="text-orange-600 font-semibold">
-                          Rp {(item.price * item.quantity).toLocaleString()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* FOOTER */}
-                  <div className="pt-4">
-                    <div className="flex justify-between font-bold text-xl">
-                      <span>Total</span>
-
-                      <span className="text-orange-600">
-                        Rp {order.total_price.toLocaleString()}
-                      </span>
-                    </div>
-
-                    <p className="text-sm text-gray-500 mt-4">
-                      Waiter: {order.waitres?.name || "System"}
-                    </p>
-                    {order.status === "confirmed" && (
-                      <div className="mt-4">
-                        <Link
-                          href={`/kasir/transaksi?order=${order.order_id}`}
-                          className="w-full inline-block text-center py-3 bg-orange-500 text-white rounded-2xl font-semibold hover:bg-orange-600"
-                        >
-                          Proses Transaksi
-                        </Link>
-                      </div>
-                    )}
-                  </div>
+                <div className="mt-5 text-sm text-gray-500">
+                  Waitres: {order.waitres?.name || "N/A"}
                 </div>
+                {/* BUTTON */}
+                {order.status === "pending" && (
+                  <button
+                    onClick={() =>
+                      router.push(`/kasir/transaksi?order=${order.id}`)
+                    }
+                    className="
+  w-full
+  mt-5
+  bg-orange-500
+  hover:bg-orange-600
+  text-white
+  py-3
+  rounded-xl
+  font-semibold
+  transition
+  "
+                  >
+                    Proses Pembayaran
+                  </button>
+                )}
               </div>
-            ))}
-          </div>
-
-          {/* EMPTY */}
-          {!loading && filteredOrders.length === 0 && (
-            <div className="text-center text-gray-400 mt-20">
-              Tidak ada pesanan
             </div>
-          )}
-        </section>
-      </main>
-    </div>
+          ))}
+        </div>
+        {/* EMPTY */}
+        {!loading && filteredOrders.length === 0 && (
+          <div className="text-center text-gray-400 mt-20">
+            Tidak ada pesanan
+          </div>
+        )}
+      </section>
+    </Sidebar>
   );
 }

@@ -2,14 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Menu,
-  AlertTriangle,
-  TrendingUp,
-  User,
-  LogOut,
-  X,
-} from "lucide-react";
+import { Menu, AlertTriangle, TrendingUp, User, LogOut, X } from "lucide-react";
 import Link from "next/link";
 import {
   ResponsiveContainer,
@@ -36,34 +29,46 @@ export default function OwnerDashboard() {
     { name: "Karyawan", icon: "👥", href: "/owner/employees" },
   ];
 
-useEffect(() => {
-  fetch("http://127.0.0.1:8000/api/dashboard")
-    .then((res) => res.json())
-    .then((data) => setDashboardData(data))
-    .catch((err) => console.error(err));
-}, []);
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/dashboard")
+      .then((res) => res.json())
+      .then((data) => setDashboardData(data))
+      .catch((err) => console.error(err));
+  }, []);
 
-const [salesData, setSalesData] = useState([]);
-useEffect(() => {
-  fetch("http://127.0.0.1:8000/api/sales-chart")
-    .then((res) => res.json())
-    .then((data) => setSalesData(data))
-    .catch((err) => console.error(err));
-}, []);
+    //Produk terlaris
+const [produkTerlaris, setProdukTerlaris] = useState("-");
+    useEffect(() => {
+      fetch("http://127.0.0.1:8000/api/reports/summary")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.produkTerlaris) {
+            setProdukTerlaris(data.produkTerlaris);
+          }
+        })
+        .catch((err) => console.error(err));
+    }, []);
+    
+  const [salesData, setSalesData] = useState([]);
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/sales-chart")
+      .then((res) => res.json())
+      .then((data) => setSalesData(data))
+      .catch((err) => console.error(err));
+  }, []);
 
-const [inventory, setInventory] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<any[]>([]);
 
-useEffect(() => {
-  fetch("http://127.0.0.1:8000/api/inventory")
-    .then((res) => res.json())
-    .then((data) => setInventory(data))
-    .catch(console.error);
-}, []);
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/inventory")
+      .then((res) => res.json())
+      .then((data) => setInventory(data))
+      .catch(console.error);
+  }, []);
 
-const lowStockItems = inventory.filter(
-  (item) =>
-    Number(item.qty) <= Number(item.minimum_stock)
-);
+  const lowStockItems = inventory.filter(
+    (item) => Number(item.qty) <= Number(item.minimum_stock),
+  );
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -124,9 +129,9 @@ const lowStockItems = inventory.filter(
             <h2 className="text-3xl font-bold">Dashboard Monitoring</h2>
           </div>
           <div className="flex items-center gap-4">
-          <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
-            🔔 Notifikasi ({lowStockItems.length})
-          </button>
+            <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
+              🔔 Notifikasi ({lowStockItems.length})
+            </button>
             <div className="flex items-center gap-2 bg-amber-500 bg-opacity-20 px-4 py-2 rounded-lg">
               <User size={20} />
               <div>
@@ -143,94 +148,107 @@ const lowStockItems = inventory.filter(
 
           {/* Quick Stats */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-          {[
-            {
-            label: "Pendapatan",
-            value: dashboardData?.today_revenue
-              ? `Rp ${Number(
-                  dashboardData.today_revenue
-                ).toLocaleString()}`
-              : "Rp 0",
-             },
-            {
-              label: "Total Transaksi",
-              value: dashboardData?.total_transactions ?? 0,
-            },
-            {
-              label: "Jam Operasional",
-              value: "07:00 - 22:00",
-            },
-          ].map((stat, idx) => (
-            <div
-              key={idx}
-              className="bg-white rounded-lg shadow-md p-4 text-center hover:shadow-lg transition"
-            >
-              <p className="text-gray-600 text-sm mb-1">{stat.label}</p>
-              <p className="text-2xl font-bold text-orange-600">
-                {stat.value}
-              </p>
-            </div>
-          ))}
-        </div>
+            {[
+              {
+                label: "Pendapatan",
+                value: dashboardData?.today_revenue
+                  ? `Rp ${Number(dashboardData.today_revenue).toLocaleString()}`
+                  : "Rp 0",
+              },
+              {
+                label: "Total Transaksi",
+                value: dashboardData?.total_transactions ?? 0,
+              },
+              {
+                label: "Jam Operasional",
+                value: "07:00 - 22:00",
+              },
+            ].map((stat, idx) => (
+              <div
+                key={idx}
+                className="bg-white rounded-lg shadow-md p-4 text-center hover:shadow-lg transition"
+              >
+                <p className="text-gray-600 text-sm mb-1">{stat.label}</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  {stat.value}
+                </p>
+              </div>
+            ))}
+          </div>
 
           {/* Monitoring Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             {/* Revenue Card */}
-            <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-400 hover:shadow-lg transition">
-              <div className="flex items-center justify-between mb-4">
+            <div className="bg-white rounded-xl shadow-md p-4 border-l-4 border-green-400 hover:shadow-lg transition">
+              <div className="flex items-center gap-4">
                 <div className="bg-green-100 p-3 rounded-lg">
-                  <span className="text-3xl">💰</span>
+                  <span className="text-2xl">💰</span>
+                </div>
+
+                <div>
+                  <p className="text-gray-600 text-sm">Pendapatan Hari Ini</p>
+
+                  <h3 className="text-xl font-bold text-amber-950">
+                    Rp{" "}
+                    {Number(dashboardData?.today_revenue || 0).toLocaleString()}
+                  </h3>
                 </div>
               </div>
-              <p className="text-gray-600 text-sm mb-2">Pendapatan Hari Ini</p>
-                <h3 className="text-3xl font-bold text-amber-950">
-                  Rp {Number(
-                    dashboardData?.today_revenue || 0
-                  ).toLocaleString()}
-                </h3>
             </div>
 
-            {/* Total Transactions Card */}
-            <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-400 hover:shadow-lg transition">
-              <div className="flex items-center justify-between mb-4">
+            {/* Total Transactions */}
+            <div className="bg-white rounded-xl shadow-md p-4 border-l-4 border-blue-400">
+              <div className="flex items-center gap-4">
                 <div className="bg-blue-100 p-3 rounded-lg">
-                  <span className="text-3xl">✅</span>
+                  <span className="text-2xl">✅</span>
+                </div>
+
+                <div>
+                  <p className="text-gray-600 text-sm">Total Transaksi</p>
+
+                  <h3 className="text-xl font-bold text-amber-950">
+                    {dashboardData?.total_transactions || 0}
+                  </h3>
                 </div>
               </div>
-              <p className="text-gray-600 text-sm mb-2">Total Transaksi</p>
-                <h3 className="text-3xl font-bold text-amber-950">
-                  {dashboardData?.total_transactions || 0}
-                </h3>       
-              </div>
+            </div>
 
             {/* Best Seller Card */}
-            <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-400 hover:shadow-lg transition">
-              <div className="flex items-center justify-between mb-4">
+            <div className="bg-white rounded-xl shadow-md p-4 border-l-4 border-orange-400 hover:shadow-lg transition">
+              <div className="flex items-center gap-4">
                 <div className="bg-orange-100 p-3 rounded-lg">
-                  <TrendingUp className="text-orange-600" size={24} />
+                  <TrendingUp className="text-orange-600" size={22} />
+                </div>
+
+                <div>
+                  <p className="text-gray-600 text-sm">Produk Terlaris</p>
+
+                  <h3 className="text-2xl font-bold">{produkTerlaris}</h3>
                 </div>
               </div>
-              <p className="text-gray-600 text-sm mb-2">Produk Terlaris</p>
-                <h3 className="text-3xl font-bold text-amber-950">
-                  {dashboardData?.best_seller || "-"}
-                </h3>   
             </div>
 
             {/* Low Stock Alert Card */}
-            <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-400 hover:shadow-lg transition">
-              <div className="flex items-center justify-between mb-4">
+            <div className="bg-white rounded-xl shadow-md p-4 border-l-4 border-red-400 hover:shadow-lg transition">
+              <div className="flex items-center gap-4">
                 <div className="bg-red-100 p-3 rounded-lg">
-                  <AlertTriangle className="text-red-600" size={24} />
+                  <AlertTriangle className="text-red-600" size={22} />
                 </div>
-                <span className="text-red-600 text-2xl font-bold">!</span>
+
+                <div>
+                  <p className="text-gray-600 text-sm">Stok Menipis</p>
+
+                  <h3 className="text-xl font-bold text-amber-950">
+                    {lowStockItems.length} Item
+                  </h3>
+                </div>
+
+                <span className="ml-auto text-red-600 text-xl font-bold">
+                  !
+                </span>
               </div>
-              <p className="text-gray-600 text-sm mb-2">Stok Memipis</p>
-                <h3 className="text-3xl font-bold text-amber-950">
-                  {lowStockItems.length} Item
-                </h3>            
             </div>
           </div>
-
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Sales Chart */}
@@ -238,34 +256,34 @@ const lowStockItems = inventory.filter(
               <h3 className="text-xl font-bold text-amber-950 mb-4">
                 Grafik Penjualan
               </h3>
-            <div className="h-64">
-              {salesData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={salesData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line
-                      type="monotone"
-                      dataKey="total"
-                      stroke="#f97316"
-                      strokeWidth={3}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg border border-dashed border-orange-200">
-                  <span className="text-5xl mb-3">📈</span>
-                  <p className="font-semibold text-amber-900">
-                    Belum Ada Data Penjualan
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Grafik akan muncul setelah transaksi pertama selesai.
-                  </p>
-                </div>
-              )}
-            </div>
+              <div className="h-64">
+                {salesData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={salesData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line
+                        type="monotone"
+                        dataKey="total"
+                        stroke="#f97316"
+                        strokeWidth={3}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg border border-dashed border-orange-200">
+                    <span className="text-5xl mb-3">📈</span>
+                    <p className="font-semibold text-amber-900">
+                      Belum Ada Data Penjualan
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Grafik akan muncul setelah transaksi pertama selesai.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Recent Orders */}
@@ -294,13 +312,16 @@ const lowStockItems = inventory.filter(
                         </p>
 
                         <p className="text-xs text-gray-600">
-                          {new Date(order.created_at).toLocaleDateString("id-ID")}
+                          {new Date(order.created_at).toLocaleDateString(
+                            "id-ID",
+                          )}
                         </p>
                       </div>
 
                       <div className="text-right">
                         <p className="font-semibold text-amber-950">
-                          Rp {Number(order.total_amount).toLocaleString("id-ID")}
+                          Rp{" "}
+                          {Number(order.total_amount).toLocaleString("id-ID")}
                         </p>
 
                         <span
@@ -308,8 +329,8 @@ const lowStockItems = inventory.filter(
                             order.status === "selesai"
                               ? "bg-green-100 text-green-700"
                               : order.status === "proses"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-red-100 text-red-700"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-red-100 text-red-700"
                           }`}
                         >
                           {order.status}
@@ -330,7 +351,7 @@ const lowStockItems = inventory.filter(
                     </p>
                   </div>
                 )}
-              </div>  
+              </div>
             </div>
           </div>
         </main>

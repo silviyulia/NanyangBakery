@@ -25,7 +25,7 @@ return new class extends Migration
             $table->timestamps();
             
             // Foreign keys
-            $table->foreign('order_id')->references('order_id')->on('orders')->onDelete('set null');
+            $table->foreign('order_id')->references('id')->on('orders')->onDelete('set null');
             $table->foreign('kasir_id')->references('user_id')->on('users')->onDelete('restrict');
             // session_id FK will be added in a separate migration after cashier_sessions table exists
         });

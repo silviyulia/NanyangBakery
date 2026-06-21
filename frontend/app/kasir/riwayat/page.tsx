@@ -57,32 +57,10 @@ export default function RiwayatPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4ece7] flex">
-      {/* SIDEBAR */}
-      <Sidebar />
+    <Sidebar>
 
       {/* MAIN */}
       <main className="flex-1">
-        {/* HEADER */}
-        <header className="bg-[#b65a00] px-8 py-5 flex items-center justify-between shadow-md">
-          <h2 className="text-4xl font-bold text-white">
-            Dashboard Kasir
-          </h2>
-
-          <div className="bg-white rounded-full px-5 py-2 flex items-center gap-3 shadow">
-            <div className="w-10 h-10 rounded-full border flex items-center justify-center">
-              👤
-            </div>
-
-            <div>
-              <p className="font-bold text-[#b65a00] leading-none">
-                kasir
-              </p>
-              <span className="text-sm text-gray-500">System</span>
-            </div>
-          </div>
-        </header>
-
         {/* CONTENT */}
         <section className="p-8">
           {/* TITLE CARD */}
@@ -205,16 +183,9 @@ export default function RiwayatPage() {
                 </tbody>
               </table>
             </div>
-
-            {/* EMPTY */}
-            {!loading && transaksi.length === 0 && (
-              <div className="text-center text-gray-400 py-16">
-                Tidak ada riwayat transaksi
-              </div>
-            )}
           </div>
         </section>
       </main>
-    </div>
+    </Sidebar>
   );
 }

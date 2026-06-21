@@ -13,7 +13,34 @@ interface Product {
   image?: string;
   category_id?: number;
   status?: string;
+  stock: number;
 }
+type OrderDetail = {
+  id: number;
+  table_id: number;
+  total_amount: string;
+  status: string;
+
+  table?: {
+    table_number: number;
+  };
+
+  waitres?: {
+    name: string;
+  };
+
+  items: {
+    id: number;
+    quantity: number;
+    price: string;
+    subtotal: string;
+
+    product?: {
+      product_id: number;
+      name: string;
+    };
+  }[];
+};
 
 export default function transaksiPage() {
   const [selectedCategory, setSelectedCategory] = useState("Semua");
@@ -24,6 +51,8 @@ export default function transaksiPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState(["Semua"]);
   const [loading, setLoading] = useState(true);
+  const orderId = searchParams.get("order");
+  const [order, setOrder] = useState<OrderDetail | null>(null);
   const [cart, setCart] = useState<
     Array<{
       id: number;
@@ -76,10 +105,17 @@ export default function transaksiPage() {
         }
 
         // Fetch categories
-        const categoriesRes = await fetch("http://127.0.0.1:8000/api/categories");
+        const categoriesRes = await fetch(
+          "http://127.0.0.1:8000/api/categories",
+        );
         if (categoriesRes.ok) {
           const categoriesData = await categoriesRes.json();
-          const categoryNames = ["Semua", ...categoriesData.map((cat: any) => cat.name || `Kategori ${cat.id}`)];
+          const categoryNames = [
+            "Semua",
+            ...categoriesData.map(
+              (cat: any) => cat.name || `Kategori ${cat.id}`,
+            ),
+          ];
           setCategories(categoryNames);
         }
       } catch (error) {
@@ -92,6 +128,35 @@ export default function transaksiPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (!orderId) return;
+
+    const fetchOrder = async () => {
+      try {
+        const res = await fetch(`http://127.0.0.1:8000/api/orders/${orderId}`);
+
+        const data = await res.json();
+
+        setOrder(data);
+
+        setIncomingTable(data.table?.table_number?.toString() || "");
+
+        setCart(
+          data.items.map((item: any) => ({
+            id: item.product?.product_id,
+            name: item.product?.name,
+            price: Number(item.price),
+            qty: item.quantity,
+          })),
+        );
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchOrder();
+  }, [orderId]);
+
   const getProductCategoryName = (categoryId: number | undefined) => {
     if (!categoryId) return "Lainnya";
     if (categoryId === 1) return "Roti & Pastry";
@@ -101,32 +166,34 @@ export default function transaksiPage() {
   };
 
   // ================= FILTER =================
-  const filteredMenu = products.filter((item) => {
-    const categoryName = getProductCategoryName(item.category_id);
-    const matchCategory = selectedCategory === "Semua" || categoryName === selectedCategory;
-    const matchSearch = item.name.toLowerCase().includes(search.toLowerCase());
-    return matchCategory && matchSearch && item.status === "active";
-  }).map(product => ({
-    id: product.product_id,
-    name: product.name,
-    category: getProductCategoryName(product.category_id),
-    price: product.price,
-    image: product.image || "https://via.placeholder.com/300",
-  }));
+  const filteredMenu = products
+    .filter((item) => {
+      const categoryName = getProductCategoryName(item.category_id);
+      const matchCategory =
+        selectedCategory === "Semua" || categoryName === selectedCategory;
+      const matchSearch = item.name
+        .toLowerCase()
+        .includes(search.toLowerCase());
+      return matchCategory && matchSearch && item.status === "active";
+    })
+    .map((product) => ({
+      id: product.product_id,
+      name: product.name,
+      category: getProductCategoryName(product.category_id),
+      price: product.price,
+      image: product.image
+        ? `http://127.0.0.1:8000/storage/${product.image}`
+        : "/images/no-image.png",
+      stock: product.stock,
+    }));
 
   // ================= CART =================
   const addToCart = (item: MenuItem) => {
-    const existing = cart.find(
-      (c) => c.id === item.id
-    );
+    const existing = cart.find((c) => c.id === item.id);
 
     if (existing) {
       setCart(
-        cart.map((c) =>
-          c.id === item.id
-            ? { ...c, qty: c.qty + 1 }
-            : c
-        )
+        cart.map((c) => (c.id === item.id ? { ...c, qty: c.qty + 1 } : c)),
       );
     } else {
       setCart([...cart, { ...item, qty: 1 }]);
@@ -137,18 +204,11 @@ export default function transaksiPage() {
     setCart(cart.filter((c) => c.id !== id));
   };
 
-  const updateQty = (
-    id: number,
-    qty: number
-  ) => {
+  const updateQty = (id: number, qty: number) => {
     if (qty <= 0) {
       removeFromCart(id);
     } else {
-      setCart(
-        cart.map((c) =>
-          c.id === id ? { ...c, qty } : c
-        )
-      );
+      setCart(cart.map((c) => (c.id === id ? { ...c, qty } : c)));
     }
   };
 
@@ -156,9 +216,7 @@ export default function transaksiPage() {
     setCart([]);
 
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem(
-        "waitresOrder"
-      );
+      window.localStorage.removeItem("waitresOrder");
     }
   };
 
@@ -184,284 +242,427 @@ export default function transaksiPage() {
 
     router.push("/kasir");
   };
+  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [amountPaid, setAmountPaid] = useState(0);
+  const grandTotal = Math.round(totalPrice * 1.1);
+  const changeAmount =
+    paymentMethod === "cash" ? Math.max(0, amountPaid - grandTotal) : 0;
+  const [processing, setProcessing] = useState(false);
+  const handlePayment = async () => {
+  try {
+    if (!orderId) {
+      alert("Order tidak ditemukan");
+      return;
+    }
 
-  const totalPrice = cart.reduce(
-    (sum, item) =>
-      sum + item.price * item.qty,
-    0
-  );
+    let paid = amountPaid;
 
-  const totalItems = cart.reduce(
-    (sum, item) => sum + item.qty,
-    0
-  );
+    if (paymentMethod === "qris" || paymentMethod === "transfer") {
+      paid = grandTotal;
+    }
+
+    if (paymentMethod === "cash" && paid < grandTotal) {
+      alert("Uang pembayaran kurang");
+      return;
+    }
+
+
+    // ================= UPDATE ORDER ITEMS =================
+
+    const itemRes = await fetch(
+      `http://127.0.0.1:8000/api/orders/${orderId}/items`,
+      {
+        method: "PUT",
+        headers:{
+          "Content-Type":"application/json",
+          Accept:"application/json"
+        },
+
+        body: JSON.stringify({
+          items: cart
+        })
+      }
+    );
+
+
+    const itemData = await itemRes.json();
+
+    console.log("UPDATE ITEM:", itemData);
+
+
+    if(!itemRes.ok){
+      throw new Error("Gagal update item order");
+    }
+
+
+
+    // ================= SIMPAN TRANSAKSI =================
+
+    const trxRes = await fetch(
+      "http://127.0.0.1:8000/api/transactions",
+      {
+        method:"POST",
+
+        headers:{
+          "Content-Type":"application/json",
+          Accept:"application/json"
+        },
+
+        body:JSON.stringify({
+
+          order_id:Number(orderId),
+
+          kasir_id:2,
+
+          total_amount:grandTotal,
+
+          payment_method:paymentMethod,
+
+          amount_paid:paid,
+
+          items:cart
+
+        })
+      }
+    );
+
+
+    const trxData = await trxRes.json();
+
+
+    if(!trxRes.ok){
+      console.log(trxData);
+      throw new Error("Gagal membuat transaksi");
+    }
+
+
+
+    // ================= UPDATE STATUS ORDER =================
+
+
+    const orderRes = await fetch(
+      `http://127.0.0.1:8000/api/orders/${orderId}`,
+      {
+        method:"PUT",
+
+        headers:{
+          "Content-Type":"application/json"
+        },
+
+        body:JSON.stringify({
+
+          status:"selesai"
+
+        })
+      }
+    );
+
+
+    if(!orderRes.ok){
+      throw new Error("Gagal update order");
+    }
+
+
+
+    alert("Pembayaran berhasil");
+
+
+    router.push("/kasir");
+
+
+  } catch(error){
+
+    console.error(error);
+    alert("Pembayaran gagal");
+
+  }
+};
 
   return (
-    <div className="min-h-screen bg-[#f4ece7] flex">
-      {/* SIDEBAR */}
-      <Sidebar />
+    <>
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl w-[450px] p-6 shadow-xl">
+            <h2 className="text-2xl font-bold text-[#5c2500] mb-6">
+              Pembayaran
+            </h2>
 
-      {/* MAIN */}
-      <main className="flex-1">
-        {/* HEADER */}
-        <header className="bg-[#b65a00] px-8 py-5 flex items-center justify-between shadow-md">
-          <h2 className="text-4xl font-bold text-white">
-            Dashboard Kasir
-          </h2>
+            <div className="mb-4">
+              <label className="block mb-2 font-medium">
+                Metode Pembayaran
+              </label>
 
-          <div className="bg-white rounded-full px-5 py-2 flex items-center gap-3 shadow">
-            <div className="w-10 h-10 rounded-full border flex items-center justify-center">
-              👤
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="w-full border rounded-xl p-3"
+              >
+                <option value="cash">Cash</option>
+                <option value="qris">QRIS</option>
+                <option value="transfer">Transfer</option>
+              </select>
             </div>
 
-            <div>
-              <p className="font-bold text-[#b65a00] leading-none">
-                kasir
-              </p>
+            <div className="mb-4">
+              <label className="block mb-2 font-medium">Total Tagihan</label>
 
-              <span className="text-sm text-gray-500">
-                hau
-              </span>
+              <div className="border rounded-xl p-3 bg-gray-100 font-semibold">
+                Rp {grandTotal.toLocaleString("id-ID")}
+              </div>
+            </div>
+
+            {paymentMethod === "cash" && (
+              <>
+                <div className="mb-4">
+                  <label className="block mb-2 font-medium">
+                    Uang Diterima
+                  </label>
+
+                  <input
+                    type="number"
+                    value={amountPaid}
+                    onChange={(e) => setAmountPaid(Number(e.target.value))}
+                    className="w-full border rounded-xl p-3"
+                  />
+                </div>
+
+                <div className="mb-6">
+                  <label className="block mb-2 font-medium">Kembalian</label>
+
+                  <div className="border rounded-xl p-3 bg-green-50 text-green-700 font-bold">
+                    Rp {changeAmount.toLocaleString("id-ID")}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {(paymentMethod === "qris" || paymentMethod === "transfer") && (
+              <div className="mb-6 p-4 bg-blue-50 rounded-xl text-blue-700">
+                Pembayaran akan dianggap lunas setelah dikonfirmasi kasir.
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="flex-1 bg-gray-200 py-3 rounded-xl"
+              >
+                Batal
+              </button>
+
+              <button
+                onClick={handlePayment}
+                className="flex-1 bg-green-600 text-white py-3 rounded-xl"
+              >
+                Konfirmasi
+              </button>
             </div>
           </div>
-        </header>
+        </div>
+      )}
 
-        {/* CONTENT */}
-        <section className="p-8">
-          {incomingTable && (
-            <div className="mb-6">
-              <div className="bg-orange-100 border border-orange-300 p-4 rounded-2xl text-orange-800 font-medium">
-                Pesanan dari{" "}
-                <span className="font-bold">
-                  {incomingTable}
-                </span>
+      <Sidebar>
+        {/* MAIN */}
+        <main className="flex-1">
+          {/* CONTENT */}
+          <section className="p-8">
+            {incomingTable && (
+              <div className="mb-6">
+                <div className="bg-orange-100 border border-orange-300 p-4 rounded-2xl text-orange-800 font-medium">
+                  Pesanan dari{" "}
+                  <span className="font-bold">{incomingTable}</span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* LEFT - MENU */}
-            <div className="xl:col-span-2 bg-white p-6 rounded-3xl shadow-sm border border-gray-200">
-              <h2 className="text-2xl font-bold text-[#5c2500] mb-6">
-                Menu
-              </h2>
-
-              {/* CATEGORY */}
-              <div className="flex gap-3 flex-wrap mb-5">
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() =>
-                      setSelectedCategory(cat)
-                    }
-                    className={`px-5 py-2 rounded-full font-semibold transition ${
-                      selectedCategory === cat
-                        ? "bg-orange-500 text-white shadow"
-                        : "bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200"
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              {/* LEFT - MENU */}
+              <div className="xl:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-gray-200">
+                {" "}
+                <h2 className="text-2xl font-bold text-[#5c2500] mb-6">Menu</h2>
+                {/* CATEGORY */}
+                <div className="flex gap-3 flex-wrap mb-5">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-5 py-2 rounded-full font-semibold transition ${
+                        selectedCategory === cat
+                          ? "bg-orange-500 text-white shadow"
+                          : "bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+                {/* SEARCH */}
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Cari menu..."
+                  className="w-full border border-gray-200 px-5 py-3 rounded-2xl mb-6 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                />
+                {/* MENU GRID */}
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-6">
+                  {" "}
+                  {filteredMenu.map((item) => (
+                    <MenuCard
+                      key={item.id}
+                      item={item}
+                      addToCart={addToCart}
+                      disabled={false}
+                    />
+                  ))}
+                </div>
               </div>
 
-              {/* SEARCH */}
-              <input
-                value={search}
-                onChange={(e) =>
-                  setSearch(e.target.value)
-                }
-                placeholder="Cari menu..."
-                className="w-full border border-gray-200 px-5 py-3 rounded-2xl mb-6 focus:outline-none focus:ring-2 focus:ring-orange-300"
-              />
+              {/* RIGHT - CART */}
+              <div className="xl:col-span-1">
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6 sticky top-6">
+                  <h2 className="text-2xl font-bold text-[#5c2500] mb-6">
+                    🛒 Pesanan ({totalItems})
+                  </h2>
 
-              {/* MENU GRID */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredMenu.map((item) => (
-                  <MenuCard
-                    key={item.id}
-                    item={item}
-                    addToCart={addToCart}
-                    disabled={false}
-                  />
-                ))}
-              </div>
-            </div>
+                  {/* CART ITEMS */}
+                  <div className="space-y-3 max-h-96 overflow-y-auto mb-6 border-b border-gray-200 pb-4">
+                    {cart.length === 0 ? (
+                      <p className="text-center text-gray-400 py-8">
+                        Keranjang kosong
+                      </p>
+                    ) : (
+                      cart.map((item) => (
+                        <div
+                          key={item.id}
+                          className="bg-orange-50 p-4 rounded-2xl border border-orange-100"
+                        >
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <h3 className="font-semibold">{item.name}</h3>
 
-            {/* RIGHT - CART */}
-            <div className="xl:col-span-1">
-              <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6 sticky top-6">
-                <h2 className="text-2xl font-bold text-[#5c2500] mb-6">
-                  🛒 Pesanan ({totalItems})
-                </h2>
+                              <p className="text-sm text-orange-700">
+                                Rp {item.price.toLocaleString("id-ID")}
+                              </p>
+                            </div>
 
-                {/* CART ITEMS */}
-                <div className="space-y-3 max-h-96 overflow-y-auto mb-6 border-b border-gray-200 pb-4">
-                  {cart.length === 0 ? (
-                    <p className="text-center text-gray-400 py-8">
-                      Keranjang kosong
-                    </p>
-                  ) : (
-                    cart.map((item) => (
-                      <div
-                        key={item.id}
-                        className="bg-orange-50 p-4 rounded-2xl border border-orange-100"
-                      >
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <h3 className="font-semibold">
-                              {item.name}
-                            </h3>
-
-                            <p className="text-sm text-orange-700">
-                              Rp{" "}
-                              {item.price.toLocaleString(
-                                "id-ID"
-                              )}
-                            </p>
+                            <button
+                              onClick={() => removeFromCart(item.id)}
+                              className="text-red-500 font-bold"
+                            >
+                              ✕
+                            </button>
                           </div>
 
-                          <button
-                            onClick={() =>
-                              removeFromCart(item.id)
-                            }
-                            className="text-red-500 font-bold"
-                          >
-                            ✕
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => updateQty(item.id, item.qty - 1)}
+                              className="w-8 h-8 rounded-lg bg-orange-200 font-bold"
+                            >
+                              −
+                            </button>
+
+                            <input
+                              type="number"
+                              value={item.qty}
+                              onChange={(e) =>
+                                updateQty(
+                                  item.id,
+                                  parseInt(e.target.value) || 0,
+                                )
+                              }
+                              className="flex-1 text-center border rounded-lg py-1"
+                            />
+
+                            <button
+                              onClick={() => updateQty(item.id, item.qty + 1)}
+                              className="w-8 h-8 rounded-lg bg-orange-200 font-bold"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <p className="text-right font-bold text-orange-600 mt-3">
+                            Rp {(item.price * item.qty).toLocaleString("id-ID")}
+                          </p>
                         </div>
-
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() =>
-                              updateQty(
-                                item.id,
-                                item.qty - 1
-                              )
-                            }
-                            className="w-8 h-8 rounded-lg bg-orange-200 font-bold"
-                          >
-                            −
-                          </button>
-
-                          <input
-                            type="number"
-                            value={item.qty}
-                            onChange={(e) =>
-                              updateQty(
-                                item.id,
-                                parseInt(
-                                  e.target.value
-                                ) || 0
-                              )
-                            }
-                            className="flex-1 text-center border rounded-lg py-1"
-                          />
-
-                          <button
-                            onClick={() =>
-                              updateQty(
-                                item.id,
-                                item.qty + 1
-                              )
-                            }
-                            className="w-8 h-8 rounded-lg bg-orange-200 font-bold"
-                          >
-                            +
-                          </button>
-                        </div>
-
-                        <p className="text-right font-bold text-orange-600 mt-3">
-                          Rp{" "}
-                          {(
-                            item.price * item.qty
-                          ).toLocaleString(
-                            "id-ID"
-                          )}
-                        </p>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {/* TOTAL */}
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-
-                    <span>
-                      Rp{" "}
-                      {totalPrice.toLocaleString(
-                        "id-ID"
-                      )}
-                    </span>
+                      ))
+                    )}
                   </div>
 
-                  <div className="flex justify-between">
-                    <span>PPN 10%</span>
+                  {/* TOTAL */}
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span>Subtotal</span>
 
-                    <span>
-                      Rp{" "}
-                      {Math.round(
-                        totalPrice * 0.1
-                      ).toLocaleString("id-ID")}
-                    </span>
-                  </div>
+                      <span>Rp {totalPrice.toLocaleString("id-ID")}</span>
+                    </div>
 
-                  <div className="flex justify-between bg-orange-100 p-4 rounded-2xl font-bold text-lg">
-                    <span>Total</span>
+                    <div className="flex justify-between">
+                      <span>PPN 10%</span>
 
-                    <span className="text-orange-600">
-                      Rp{" "}
-                      {Math.round(
-                        totalPrice * 1.1
-                      ).toLocaleString("id-ID")}
-                    </span>
-                  </div>
+                      <span>
+                        Rp{" "}
+                        {Math.round(totalPrice * 0.1).toLocaleString("id-ID")}
+                      </span>
+                    </div>
 
-                  {/* BUTTON */}
-                  <div className="space-y-3 pt-4">
-                    <button
-                      onClick={handleSaveOrder}
-                      disabled={cart.length === 0}
-                      className={`w-full py-3 rounded-2xl font-bold text-white transition ${
-                        cart.length === 0
-                          ? "bg-gray-300 cursor-not-allowed"
-                          : "bg-blue-600 hover:bg-blue-700"
-                      }`}
-                    >
-                      💾 Simpan Pesanan
-                    </button>
+                    <div className="flex justify-between bg-orange-100 p-4 rounded-2xl font-bold text-lg">
+                      <span>Total</span>
 
-                    <button
-                      disabled={cart.length === 0}
-                      className={`w-full py-3 rounded-2xl font-bold text-white transition ${
-                        cart.length === 0
-                          ? "bg-gray-300 cursor-not-allowed"
-                          : "bg-green-600 hover:bg-green-700"
-                      }`}
-                    >
-                      ✓ Proses Pembayaran
-                    </button>
+                      <span className="text-orange-600">
+                        Rp{" "}
+                        {Math.round(totalPrice * 1.1).toLocaleString("id-ID")}
+                      </span>
+                    </div>
 
-                    <button
-                      onClick={clearCart}
-                      disabled={cart.length === 0}
-                      className={`w-full py-3 rounded-2xl font-bold transition ${
-                        cart.length === 0
-                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                          : "bg-red-500 text-white hover:bg-red-600"
-                      }`}
-                    >
-                      🗑️ Bersihkan
-                    </button>
+                    {/* BUTTON */}
+                    <div className="space-y-3 pt-4">
+                      <button
+                        onClick={handleSaveOrder}
+                        disabled={cart.length === 0}
+                        className={`w-full py-3 rounded-2xl font-bold text-white transition ${
+                          cart.length === 0
+                            ? "bg-gray-300 cursor-not-allowed"
+                            : "bg-blue-600 hover:bg-blue-700"
+                        }`}
+                      >
+                        💾 Simpan Pesanan
+                      </button>
+
+                      <button
+                        onClick={() => setShowPaymentModal(true)}
+                        disabled={cart.length === 0}
+                        className={`w-full py-3 rounded-2xl font-bold text-white transition ${
+                          cart.length === 0
+                            ? "bg-gray-300 cursor-not-allowed"
+                            : "bg-green-600 hover:bg-green-700"
+                        }`}
+                      >
+                        ✓ Proses Pembayaran
+                      </button>
+
+                      <button
+                        onClick={clearCart}
+                        disabled={cart.length === 0}
+                        className={`w-full py-3 rounded-2xl font-bold transition ${
+                          cart.length === 0
+                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            : "bg-red-500 text-white hover:bg-red-600"
+                        }`}
+                      >
+                        🗑️ Bersihkan
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
-      </main>
-    </div>
+          </section>
+        </main>
+      </Sidebar>
+    </>
   );
 }

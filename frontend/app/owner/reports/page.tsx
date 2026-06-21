@@ -2,30 +2,47 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {  Menu,BarChart3,Package,AlertTriangle,TrendingUp,User,LogOut,X, } from "lucide-react";
+import {
+  Menu,
+  BarChart3,
+  Package,
+  AlertTriangle,
+  TrendingUp,
+  User,
+  LogOut,
+  X,
+} from "lucide-react";
 import { Table } from "flowbite-react";
 import Link from "next/link";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import {AreaChart,Area, XAxis, YAxis, Tooltip,ResponsiveContainer,} from "recharts";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 // 🔹 TYPE
-type Report = {
-  id: number;
-  produk: string;
-  jumlah: number;
-  total: number;
-  tanggal: string;
-};
 type Transaction = {
-  id: string;
-  tanggal: string;
-  meja: string;
-  items: number;
-  total: number;
-  metode: string;
-  kasir: string;
+  id: number;
+  created_at: string;
+  table_id: number;
+  items?: {
+    quantity: number;
+    product?: {
+      name: string;
+    };
+  }[];
+  total_amount: string;
+  status: string;
+
+  waitres?: {
+    name: string;
+  };
 };
 
 export default function ReportsPage() {
@@ -34,8 +51,7 @@ export default function ReportsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // DATA LAPORAN
-  const [reportData, setReportData] = useState<Report[]>([]);
-  const [filteredData, setFilteredData] = useState<Report[]>([]);
+  const [filteredData, setFilteredData] = useState<Transaction[]>([]);
 
   // FILTER
   const [periode, setPeriode] = useState("hari_ini");
@@ -60,163 +76,126 @@ export default function ReportsPage() {
     { name: "Karyawan", icon: "👥", href: "/owner/employees" },
   ];
 
-  // AMBIL DATA LAPORAN
+  // AMBIL DATA TRANSAKSI
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/reports")
+    fetch("http://127.0.0.1:8000/api/orders")
       .then((res) => res.json())
       .then((data) => {
-        setReportData(data);
+        setTransactionData(data);
       })
       .catch((err) => console.error(err));
   }, []);
 
-// AMBIL DATA TRANSAKSI
-useEffect(() => {
-  fetch("http://127.0.0.1:8000/api/orders")
-    .then((res) => res.json())
-    .then((data) => {
-      setTransactionData(data);
-    })
-    .catch((err) => console.error(err));
-}, []);
+  //Produk terlaris
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/reports/summary")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.produkTerlaris) {
+          setProdukTerlaris(data.produkTerlaris);
+        }
+      })
+      .catch((err) => console.error(err));
+  }, []);
 
-//Produk terlaris
-useEffect(() => {
-  fetch("http://127.0.0.1:8000/api/reports/summary")
-    .then((res) => res.json())
-    .then((data) => {
-      if (data.produkTerlaris) {
-        setProdukTerlaris(data.produkTerlaris);
-      }
-    })
-    .catch((err) => console.error(err));
-}, []);
+  const handleFilter = () => {
+    let result = [...transactionData];
 
-const handleFilter = () => {
-  let result = [...reportData];
+    if (periode === "hari_ini") {
+      const today = new Date().toISOString().split("T")[0];
 
-  if (periode === "hari_ini") {
-    const today = new Date().toISOString().split("T")[0];
-
-    result = reportData.filter(
-      (item) => item.tanggal === today
-    );
-  }
-
-  else if (periode === "bulan_ini") {
-    const now = new Date();
-
-    result = reportData.filter((item) => {
-      const d = new Date(item.tanggal);
-
-      return (
-        d.getMonth() === now.getMonth() &&
-        d.getFullYear() === now.getFullYear()
+      result = transactionData.filter((trx) =>
+        trx.created_at.startsWith(today),
       );
+    } else if (periode === "bulan_ini") {
+      const now = new Date();
+
+      result = transactionData.filter((trx) => {
+        const date = new Date(trx.created_at);
+
+        return (
+          date.getMonth() === now.getMonth() &&
+          date.getFullYear() === now.getFullYear()
+        );
+      });
+    } else if (periode === "tahun_ini") {
+      const year = new Date().getFullYear();
+
+      result = transactionData.filter((trx) => {
+        return new Date(trx.created_at).getFullYear() === year;
+      });
+    } else if (periode === "kustom" && tglMulai && tglSelesai) {
+      result = transactionData.filter((trx) => {
+        const date = new Date(trx.created_at);
+
+        return date >= new Date(tglMulai) && date <= new Date(tglSelesai);
+      });
+    }
+
+    setFilteredData(result);
+  };
+
+  const dataToShow = filteredData.length > 0 ? filteredData : transactionData;
+
+  const transaksiSelesai = dataToShow.filter((trx) => trx.status === "selesai");
+
+  const totalPendapatan = transaksiSelesai.reduce(
+    (sum, trx) => sum + Number(trx.total_amount || 0),
+    0,
+  );
+
+  const totalProduk = transaksiSelesai.reduce(
+    (sum, trx) =>
+      sum + (trx.items?.reduce((total, item) => total + item.quantity, 0) || 0),
+    0,
+  );
+
+  const chartData = transaksiSelesai.map((trx) => ({
+    tanggal: new Date(trx.created_at).toLocaleDateString("id-ID"),
+
+    pendapatan: Number(trx.total_amount),
+  }));
+
+  const downloadExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(dataToShow);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Laporan");
+
+    XLSX.writeFile(wb, "laporan_keuangan.xlsx");
+  };
+
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text("Laporan Keuangan Bakery", 14, 15);
+
+    autoTable(doc, {
+      startY: 40,
+      head: [["ID", "Tanggal", "Meja", "Total", "Status"]],
+      body: dataToShow.map((trx) => [
+        trx.id,
+        new Date(trx.created_at).toLocaleDateString("id-ID"),
+        `Meja ${trx.table_id}`,
+        `Rp ${Number(trx.total_amount).toLocaleString("id-ID")}`,
+        trx.status,
+      ]),
     });
-  }
 
-  else if (periode === "tahun_ini") {
-    const year = new Date().getFullYear();
+    doc.save("laporan_keuangan.pdf");
+  };
 
-    result = reportData.filter(
-      (item) =>
-        new Date(item.tanggal).getFullYear() === year
-    );
-  }
+  const [inventory, setInventory] = useState<any[]>([]);
 
-  else if (
-    periode === "kustom" &&
-    tglMulai &&
-    tglSelesai
-  ) {
-    result = reportData.filter((item) => {
-      const tanggal = new Date(item.tanggal);
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/inventory")
+      .then((res) => res.json())
+      .then((data) => setInventory(data))
+      .catch(console.error);
+  }, []);
 
-      return (
-        tanggal >= new Date(tglMulai) &&
-        tanggal <= new Date(tglSelesai)
-      );
-    });
-  }
-
-  setFilteredData(result);
-};
-
-const dataToShow =
-  filteredData.length > 0
-    ? filteredData
-    : reportData;
-
-const totalPendapatan = dataToShow.reduce(
-  (sum, item) => sum + Number(item.total),
-  0
-);
-
-const totalProduk = dataToShow.reduce(
-  (sum, item) => sum + Number(item.jumlah),
-  0
-);
-
-const chartData = dataToShow.map((item) => ({
-  tanggal: item.tanggal,
-  pendapatan: Number(item.total),
-}));
-
- const downloadExcel = () => {
-  const ws = XLSX.utils.json_to_sheet(dataToShow);
-  const wb = XLSX.utils.book_new();
-
-  XLSX.utils.book_append_sheet(
-    wb,
-    ws,
-    "Laporan"
+  const lowStockItems = inventory.filter(
+    (item) => Number(item.qty) <= Number(item.minimum_stock),
   );
-
-  XLSX.writeFile(
-    wb,
-    "laporan_keuangan.xlsx"
-  );
-};
-
-const downloadPDF = () => {
-  const doc = new jsPDF();
-
-  doc.setFontSize(16);
-  doc.text(
-    "Laporan Keuangan Bakery",
-    14,
-    15
-  );
-
-  autoTable(doc, {
-    startY: 40,
-    head: [["ID", "Produk", "Jumlah", "Total", "Tanggal"]],
-    body: dataToShow.map((item) => [
-      item.id,
-      item.produk,
-      item.jumlah,
-      `Rp ${Number(item.total).toLocaleString("id-ID")}`,
-      item.tanggal,
-    ]),
-  });
-
-  doc.save("laporan_keuangan.pdf");
-};
-
-const [inventory, setInventory] = useState<any[]>([]);
-
-useEffect(() => {
-  fetch("http://127.0.0.1:8000/api/inventory")
-    .then((res) => res.json())
-    .then((data) => setInventory(data))
-    .catch(console.error);
-}, []);
-
-const lowStockItems = inventory.filter(
-  (item) =>
-    Number(item.qty) <= Number(item.minimum_stock)
-);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -268,7 +247,6 @@ const lowStockItems = inventory.filter(
 
       {/* MAIN */}
       <div className="flex-1 flex flex-col">
-
         {/* HEADER */}
         <header className="bg-gradient-to-r from-amber-800 to-amber-900 text-white shadow-md p-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -278,9 +256,9 @@ const lowStockItems = inventory.filter(
             <h2 className="text-3xl font-bold">Dashboard Monitoring</h2>
           </div>
           <div className="flex items-center gap-4">
-<button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
-  🔔 Notifikasi ({lowStockItems.length})
-</button>
+            <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
+              🔔 Notifikasi ({lowStockItems.length})
+            </button>
             <div className="flex items-center gap-2 bg-amber-500 bg-opacity-20 px-4 py-2 rounded-lg">
               <User size={20} />
               <div>
@@ -293,101 +271,95 @@ const lowStockItems = inventory.filter(
 
         {/* CONTENT */}
         <main className="flex-1 overflow-auto p-8">
+          {/* FILTER LAPORAN */}
+          <div className="mb-8 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <p className="text-sm font-semibold text-gray-800 mb-5">
+              Filter Laporan
+            </p>
 
-     {/* FILTER LAPORAN */}
-<div className="mb-8 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+              {/* PERIODE */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-gray-500">
+                  Periode
+                </label>
 
-  <p className="text-sm font-semibold text-gray-800 mb-5">
-    Filter Laporan
-  </p>
-
-<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
-
-  {/* PERIODE */}
-  <div className="flex flex-col gap-1.5">
-    <label className="text-xs font-medium text-gray-500">
-      Periode
-    </label>
-
-    <select
-      value={periode}
-      onChange={(e) => setPeriode(e.target.value)}
-      className="w-full h-11 px-4 text-sm border border-gray-300 rounded-xl bg-white 
+                <select
+                  value={periode}
+                  onChange={(e) => setPeriode(e.target.value)}
+                  className="w-full h-11 px-4 text-sm border border-gray-300 rounded-xl bg-white 
       focus:outline-none focus:ring-2 focus:ring-orange-300"
-    >
-      <option value="hari_ini">Hari Ini</option>
-      <option value="kemarin">Kemarin</option>
-      <option value="minggu_ini">Minggu Ini</option>
-      <option value="bulan_ini">Bulan Ini</option>
-      <option value="tahun_ini">Tahun Ini</option>
-      <option value="kustom">Kustom</option>
-    </select>
-  </div>
+                >
+                  <option value="hari_ini">Hari Ini</option>
+                  <option value="kemarin">Kemarin</option>
+                  <option value="minggu_ini">Minggu Ini</option>
+                  <option value="bulan_ini">Bulan Ini</option>
+                  <option value="tahun_ini">Tahun Ini</option>
+                  <option value="kustom">Kustom</option>
+                </select>
+              </div>
 
-  {/* TANGGAL MULAI */}
-  <div className="flex flex-col gap-1.5">
-    <label className="text-xs font-medium text-gray-500">
-      Tanggal Mulai
-    </label>
+              {/* TANGGAL MULAI */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-gray-500">
+                  Tanggal Mulai
+                </label>
 
-    <input
-      type="date"
-      value={tglMulai}
-      onChange={(e) => setTglMulai(e.target.value)}
-      disabled={periode !== "kustom"}
-      className="w-full h-11 px-4 text-sm border border-gray-300 rounded-xl 
+                <input
+                  type="date"
+                  value={tglMulai}
+                  onChange={(e) => setTglMulai(e.target.value)}
+                  disabled={periode !== "kustom"}
+                  className="w-full h-11 px-4 text-sm border border-gray-300 rounded-xl 
       focus:outline-none focus:ring-2 focus:ring-orange-300
       disabled:bg-gray-100"
-    />
-  </div>
+                />
+              </div>
 
-  {/* TANGGAL SELESAI */}
-  <div className="flex flex-col gap-1.5">
-    <label className="text-xs font-medium text-gray-500">
-      Tanggal Selesai
-    </label>
+              {/* TANGGAL SELESAI */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-gray-500">
+                  Tanggal Selesai
+                </label>
 
-    <input
-      type="date"
-      value={tglSelesai}
-      onChange={(e) => setTglSelesai(e.target.value)}
-      disabled={periode !== "kustom"}
-      className="w-full h-11 px-4 text-sm border border-gray-300 rounded-xl 
+                <input
+                  type="date"
+                  value={tglSelesai}
+                  onChange={(e) => setTglSelesai(e.target.value)}
+                  disabled={periode !== "kustom"}
+                  className="w-full h-11 px-4 text-sm border border-gray-300 rounded-xl 
       focus:outline-none focus:ring-2 focus:ring-orange-300
       disabled:bg-gray-100"
-    />
-  </div>
-</div>
+                />
+              </div>
+            </div>
 
-  <div className="flex gap-3 pt-3 border-t">
+            <div className="flex gap-3 pt-3 border-t">
+              <button
+                onClick={handleFilter}
+                className="bg-orange-500 text-white px-4 py-2 rounded-xl"
+              >
+                Tampilkan Laporan
+              </button>
 
-    <button
-      onClick={handleFilter}
-      className="bg-orange-500 text-white px-4 py-2 rounded-xl"
-    >
-      Tampilkan Laporan
-    </button>
+              <button
+                onClick={downloadPDF}
+                className="border px-4 py-2 rounded-xl"
+              >
+                Download PDF
+              </button>
 
-    <button
-      onClick={downloadPDF}
-      className="border px-4 py-2 rounded-xl"
-    >
-      Download PDF
-    </button>
-
-    <button
-      onClick={downloadExcel}
-      className="border px-4 py-2 rounded-xl"
-    >
-      Download Excel
-    </button>
-
-  </div>
-</div>
+              <button
+                onClick={downloadExcel}
+                className="border px-4 py-2 rounded-xl"
+              >
+                Download Excel
+              </button>
+            </div>
+          </div>
 
           {/* SUMMARY */}
           <div className="grid md:grid-cols-3 gap-4">
-
             <div className="bg-white p-6 rounded-xl shadow border-l-4 border-green-400">
               <p>Total Pendapatan</p>
               <h3 className="text-2xl font-bold">
@@ -402,96 +374,99 @@ const lowStockItems = inventory.filter(
 
             <div className="bg-white p-6 rounded-xl shadow border-l-4 border-orange-400">
               <p>Produk Terlaris</p>
-              <h3 className="text-2xl font-bold">
-                {produkTerlaris}
-              </h3>
+              <h3 className="text-2xl font-bold">{produkTerlaris}</h3>
             </div>
-       </div>
+          </div>
 
-<div className="bg-white p-6 rounded-xl shadow">
-  <h3 className="font-bold mb-4 text-amber-950">
-    Grafik Pendapatan
-  </h3>
+          <div className="bg-white p-6 rounded-xl shadow">
+            <h3 className="font-bold mb-4 text-amber-950">Grafik Pendapatan</h3>
 
- {chartData.length > 0 ? (
-    <ResponsiveContainer width="100%" height={300}>
-      <AreaChart data={chartData}>
-        <XAxis dataKey="tanggal" />
-        <YAxis />
-        <Tooltip />
-        <Area
-          type="monotone"
-          dataKey="pendapatan"
-          stroke="#f97316"
-          fill="#fdba74"
-        />
-      </AreaChart>
-    </ResponsiveContainer>
-  ) : (
-    <div className="h-[300px] flex flex-col items-center justify-center text-gray-500">
-      <div className="text-5xl mb-2">📊</div>
-      <p className="font-medium">Belum ada data pendapatan</p>
-      <p className="text-sm text-gray-400">
-        Grafik akan muncul setelah ada transaksi
-      </p>
-    </div>
-  )}
-</div>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={chartData}>
+                  <XAxis dataKey="tanggal" />
+                  <YAxis />
+                  <Tooltip />
+                  <Area
+                    type="monotone"
+                    dataKey="pendapatan"
+                    stroke="#f97316"
+                    fill="#fdba74"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex flex-col items-center justify-center text-gray-500">
+                <div className="text-5xl mb-2">📊</div>
+                <p className="font-medium">Belum ada data pendapatan</p>
+                <p className="text-sm text-gray-400">
+                  Grafik akan muncul setelah ada transaksi
+                </p>
+              </div>
+            )}
+          </div>
 
-<div className="bg-white p-6 rounded-xl shadow">
-  <h3 className="font-bold mb-4 text-amber-950">
-    Detail Transaksi
-  </h3>
+          <div className="bg-white p-6 rounded-xl shadow">
+            <h3 className="font-bold mb-4 text-amber-950">Detail Transaksi</h3>
 
-  <div className="overflow-x-auto">
-    <table className="w-full text-sm text-left text-gray-500">
-      <thead className="text-xs text-gray-700 uppercase bg-gray-100">
-        <tr>
-          <th className="px-6 py-3">No</th>
-          <th className="px-6 py-3">Tanggal</th>
-          <th className="px-6 py-3">Meja</th>
-          <th className="px-6 py-3">Items</th>
-          <th className="px-6 py-3">Total</th>
-          <th className="px-6 py-3">Metode</th>
-          <th className="px-6 py-3">Kasir</th>
-        </tr>
-      </thead>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left text-gray-500">
+                <thead className="text-xs text-gray-700 uppercase bg-gray-100">
+                  <tr>
+                    <th className="px-6 py-3">No</th>
+                    <th className="px-6 py-3">Tanggal</th>
+                    <th className="px-6 py-3">Meja</th>
+                    <th className="px-6 py-3">Items</th>
+                    <th className="px-6 py-3">Total</th>
+                    <th className="px-6 py-3">Metode</th>
+                    <th className="px-6 py-3">Kasir</th>
+                  </tr>
+                </thead>
 
-      <tbody>
-        {transactionData.map((trx, i) => (
-          <tr
-            key={i}
-            className="bg-white border-b hover:bg-orange-50"
-          >
-            <td className="px-6 py-4 font-medium text-gray-900">
-              {trx.id}
-            </td>
+                <tbody>
+                  {transactionData
+                    .filter((trx) => trx.status === "selesai")
+                    .map((trx) => (
+                      <tr
+                        key={trx.id}
+                        className="bg-white border-b hover:bg-orange-50"
+                      >
+                        <td className="px-6 py-4 font-medium text-gray-900">
+                          #{trx.id}
+                        </td>
 
-            <td className="px-6 py-4">{trx.tanggal}</td>
+                        <td className="px-6 py-4">
+                          {new Date(trx.created_at).toLocaleDateString("id-ID")}
+                        </td>
 
-            <td className="px-6 py-4">{trx.meja}</td>
+                        <td className="px-6 py-4">Meja {trx.table_id}</td>
 
-            <td className="px-6 py-4">
-              {trx.items} items
-            </td>
+                        <td className="px-6 py-4">
+                          {trx.items?.length || 0} item
+                        </td>
 
-            <td className="px-6 py-4">
-              Rp {trx.total.toLocaleString("id-ID")}
-            </td>
+                        <td className="px-6 py-4 font-semibold">
+                          Rp{" "}
+                          {Number(trx.total_amount || 0).toLocaleString(
+                            "id-ID",
+                          )}
+                        </td>
 
-            <td className="px-6 py-4">
-              <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
-                {trx.metode}
-              </span>
-            </td>
+                        <td className="px-6 py-4">
+                          <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
+                            {trx.status}
+                          </span>
+                        </td>
 
-            <td className="px-6 py-4">{trx.kasir}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-</div>
+                        <td className="px-6 py-4">
+                          {trx.waitres?.name || "-"}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </main>
       </div>
     </div>

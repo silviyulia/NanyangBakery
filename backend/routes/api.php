@@ -33,7 +33,8 @@ Route::put('/orders/{id}', [OrderController::class, 'update']);
 Route::delete('/orders/{id}', [OrderController::class, 'destroy']);
 Route::get('/orders/table/{table_id}/active', [OrderController::class, 'getTableActiveOrder']);
 Route::get('/occupied-tables', [OrderController::class, 'occupiedTables']);
-
+Route::get('/orders/{id}/receipt', [OrderController::class, 'receipt']);
+Route::put('/orders/{id}/items',[OrderController::class,'updateItems']);
 
 use App\Http\Controllers\Api\TransactionController;
 Route::get('/transactions', [TransactionController::class, 'index']);
@@ -71,4 +72,5 @@ Route::post('/recipes', [RecipeController::class,'store']);
 Route::put('/recipes/{id}', [RecipeController::class,'update']);
 Route::delete('/recipes/{id}', [RecipeController::class,'destroy']);
 
-
+use App\Http\Controllers\Api\PaymentController;
+Route::post('/payment/create',[PaymentController::class,'create']);

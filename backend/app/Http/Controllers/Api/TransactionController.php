@@ -11,13 +11,13 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 class TransactionController extends Controller
 {
     // GET /api/transactions
-    public function index()
-    {
-        $transactions = Transaction::with(['order', 'kasir', 'session', 'receipt'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-        return response()->json($transactions);
-    }
+public function index()
+{
+    $transactions = Transaction::orderBy('created_at', 'desc')
+        ->get();
+
+    return response()->json($transactions);
+}
 
     // GET /api/transactions?kasir_id=1&session_id=1
     public function filter(Request $request)
@@ -45,47 +45,51 @@ class TransactionController extends Controller
     }
 
     // POST /api/transactions
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'order_id' => 'nullable|exists:orders,order_id',
-            'kasir_id' => 'required|exists:users,user_id',
-            'session_id' => 'nullable|exists:cashier_sessions,session_id',
-            'total_amount' => 'required|numeric|min:0',
-            'payment_method' => 'required|in:cash,qris,transfer',
-            'amount_paid' => 'required|numeric|min:0',
-            'reference_number' => 'nullable|unique:transactions,reference_number',
+public function store(Request $request)
+{
+
+    $validated = $request->validate([
+        'order_id' => 'nullable|exists:orders,id',
+        'kasir_id' => 'required|exists:users,user_id',
+        'session_id' => 'nullable|exists:cashier_sessions,session_id',
+        'total_amount' => 'required|numeric|min:0',
+        'payment_method' => 'required|in:cash,qris,transfer',
+        'amount_paid' => 'required|numeric|min:0',
+        'reference_number' => 'nullable|unique:transactions,reference_number',
+    ]);
+
+
+    $order = \App\Models\Order::find($validated['order_id']);
+
+
+    $transaction = Transaction::create([
+        'order_id' => $validated['order_id'],
+        'kasir_id' => $validated['kasir_id'],
+        'session_id' => $validated['session_id'] ?? null,
+        'total_amount' => $validated['total_amount'],
+        'payment_method' => $validated['payment_method'],
+        'payment_status' => 'completed',
+        'amount_paid' => $validated['amount_paid'],
+        'reference_number' => $validated['reference_number'] ?? null,
+    ]);
+
+
+    if($order){
+
+        $order->update([
+            'status'=>'selesai'
         ]);
 
-        $transaction = Transaction::create([
-            'order_id' => $validated['order_id'] ?? null,
-            'kasir_id' => $validated['kasir_id'],
-            'session_id' => $validated['session_id'] ?? null,
-            'total_amount' => $validated['total_amount'],
-            'payment_method' => $validated['payment_method'],
-            'payment_status' => 'completed',
-            'amount_paid' => $validated['amount_paid'],
-            'reference_number' => $validated['reference_number'] ?? null,
-        ]);
-
-        // Generate receipt
-        if ($request->filled('items')) {
-            $receipt = Receipt::create([
-                'transaction_id' => $transaction->transaction_id,
-                'receipt_number' => $this->generateReceiptNumber(),
-                'items_detail' => json_encode($request->items),
-                'subtotal' => $request->subtotal ?? $validated['total_amount'],
-                'discount' => $request->discount ?? 0,
-                'total' => $validated['total_amount'],
-                'amount_paid' => $validated['amount_paid'],
-                'change' => $validated['amount_paid'] - $validated['total_amount'],
-                'payment_method' => $validated['payment_method'],
-            ]);
-        }
-
-        return response()->json($transaction, 201);
     }
 
+
+    return response()->json([
+        'message'=>'Pembayaran berhasil',
+        'transaction'=>$transaction,
+        'order'=>$order
+    ],201);
+
+}
     // GET /api/transactions/{id}
     public function show($id)
     {

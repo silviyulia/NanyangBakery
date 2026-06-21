@@ -15,9 +15,13 @@ class OrderController extends Controller
     // GET /api/orders
 public function index()
 {
-    $orders = Order::with(['table', 'waitres', 'items'])
-        ->orderBy('created_at', 'desc')
-        ->get();
+    $orders = Order::with([
+        'table',
+        'waitres',
+        'items.product'
+    ])
+    ->orderBy('created_at', 'desc')
+    ->get();
 
     return response()->json($orders);
 }
@@ -59,6 +63,7 @@ public function index()
 {
     $request->validate([
         'table_id' => 'required|exists:tables,table_id',
+        'waitres_id' => 'required|exists:users,user_id',
         'items' => 'required|array|min:1',
     ]);
 
@@ -68,6 +73,7 @@ public function index()
 
         $order = Order::create([
             'table_id' => $request->table_id,
+            'waitres_id' => $request->waitres_id,
             'total_amount' => 0,
             'status' => 'pending',
         ]);
@@ -119,7 +125,7 @@ public function index()
             $order = Order::findOrFail($id);
 
             $validated = $request->validate([
-                'status' => 'sometimes|in:pending,confirmed,completed,cancelled',
+                'status' => 'sometimes|in:pending,proses,selesai,batal',
                 'notes' => 'nullable|string',
             ]);
 
@@ -171,6 +177,86 @@ public function occupiedTables()
         ->pluck('table_id');
 
     return response()->json($tables);
+}
+
+public function receipt($id)
+{
+    $order = Order::with([
+        'items.product',
+        'table'
+    ])->findOrFail($id);
+
+    return response()->json([
+        'order_id' => $order->id,
+        'table' => $order->table->table_number,
+        'total' => $order->total_amount,
+        'items' => $order->items
+    ]);
+}
+
+public function updateItems(Request $request,$id)
+{
+
+    foreach($request->items as $item){
+
+
+        $exist = OrderItem::where('order_id',$id)
+        ->where('product_id',$item['id'])
+        ->first();
+
+
+
+        if($exist){
+
+
+            $exist->quantity = $item['qty'];
+
+            $exist->subtotal =
+            $exist->price * $item['qty'];
+
+            $exist->save();
+
+
+        }else{
+
+
+            OrderItem::create([
+
+                'order_id'=>$id,
+
+                'product_id'=>$item['id'],
+
+                'quantity'=>$item['qty'],
+
+                'price'=>$item['price'],
+
+                'subtotal'=>$item['price']*$item['qty']
+
+            ]);
+
+
+        }
+
+    }
+
+
+
+    $total = OrderItem::where('order_id',$id)
+        ->sum('subtotal');
+
+
+    Order::where('id',$id)->update([
+
+        'total_amount'=>$total
+
+    ]);
+
+
+
+    return response()->json([
+        "message"=>"Order item updated"
+    ]);
+
 }
 
 }
