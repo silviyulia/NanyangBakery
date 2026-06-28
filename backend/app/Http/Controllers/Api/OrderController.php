@@ -18,10 +18,9 @@ public function index()
     $orders = Order::with([
         'table',
         'waitres',
-        'items.product'
-    ])
-    ->orderBy('created_at', 'desc')
-    ->get();
+        'items.product',
+        'transaction.kasir'
+    ])->get();
 
     return response()->json($orders);
 }

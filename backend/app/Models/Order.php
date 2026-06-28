@@ -21,12 +21,12 @@ class Order extends Model
 
     protected $keyType = 'int';
 
-protected $fillable = [
-    'table_id',
-    'waitres_id',
-    'status',
-    'total_amount',
-];
+    protected $fillable = [
+        'table_id',
+        'waitres_id',
+        'status',
+        'total_amount',
+    ];
 
 protected $casts = [
     'total_amount' => 'decimal:2',
@@ -59,9 +59,12 @@ protected $casts = [
         );
     }
 
-    /**
-     * Relasi item order
-     */
+    public function kasir()
+    {
+        return $this->belongsTo(User::class, 'kasir_id', 'user_id');
+    }
+
+
     public function items(): HasMany
     {
         return $this->hasMany(
@@ -75,11 +78,7 @@ protected $casts = [
      */
     public function transaction(): HasOne
     {
-return $this->hasOne(
-    Transaction::class,
-    'order_id',
-    'id'
-);
+ return $this->hasOne(Transaction::class, 'order_id', 'id');
     }
 
     /**

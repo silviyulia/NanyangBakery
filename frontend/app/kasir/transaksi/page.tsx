@@ -607,7 +607,7 @@ export default function transaksiPage() {
                         Rp{" "}
                         {Math.round(totalPrice * 0.1).toLocaleString("id-ID")}
                       </span>
-                    </div>
+                    </div> 
 
                     <div className="flex justify-between bg-orange-100 p-4 rounded-2xl font-bold text-lg">
                       <span>Total</span>

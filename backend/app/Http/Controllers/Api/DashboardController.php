@@ -46,4 +46,57 @@ class DashboardController extends Controller
 
     return response()->json($sales);
 }
+
+public function summary()
+{
+    $produkTerlaris = OrderItem::join(
+            'products',
+            'order_items.product_id',
+            '=',
+            'products.product_id'
+        )
+        ->select(
+            'products.name',
+            DB::raw('SUM(order_items.quantity) as total_qty')
+        )
+        ->groupBy('products.name')
+        ->orderByDesc('total_qty')
+        ->first();
+
+    return response()->json([
+        'totalPendapatan' => Order::sum('total_amount'),
+        'totalTransaksi' => Order::count(),
+        'totalProduk' => OrderItem::sum('quantity'),
+        'produkTerlaris' => $produkTerlaris
+            ? $produkTerlaris->name
+            : '-',
+    ]);
+}
+
+ public function orders()
+{
+    $orders = Order::with('table')
+        ->select(
+            'id',
+            'table_id',
+            'kasir_id',
+            'total_amount',
+            'created_at'
+        )
+        ->latest()
+        ->get()
+        ->map(function ($order) {
+            return [
+                'id' => '#' . $order->id,
+                'tanggal' => $order->created_at->format('d/m/Y H:i'),
+                'meja' => 'Meja ' . ($order->table->table_number ?? '-'),
+                'items' => OrderItem::where('order_id', $order->id)
+                    ->sum('quantity'),
+                'total' => $order->total_amount,
+            ];
+        });
+
+    return response()->json($orders);
+}
+
 }

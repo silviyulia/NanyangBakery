@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Models;
-
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -19,6 +18,7 @@ class Ingredient extends Model
         'ingredient_name',
         'qty',
         'unit',
+        'minimum_stock',
         'status',
     ];
 

@@ -18,7 +18,11 @@ import Link from "next/link";
 type Order = {
   id: number;
   table_id: number;
-  status: "pending" | "confirmed" | "completed" | "cancelled";
+status:
+  | "pending"
+  | "proses"
+  | "selesai"
+  | "dibatalkan";
 
   waitres?: {
     name: string;
@@ -82,6 +86,10 @@ export default function OrdersPage() {
 
   // 🔹 REAL TIME CLOCK
   const [orders, setOrders] = useState<Order[]>([]);
+  useEffect(() => {
+    console.log("Orders:", orders);
+  }, [orders]);
+
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState<Date | null>(null);
 
@@ -95,24 +103,32 @@ export default function OrdersPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const filteredOrders = orders.filter(
-    (order) => activeFilter === "semua" || order.status === activeFilter,
-  );
+  const filteredOrders = orders.filter((order) => {
+    console.log(
+      "Filter:",
+      activeFilter,
+      "Status:",
+      order.status,
+      "Match:",
+      activeFilter === "semua" || order.status === activeFilter,
+    );
+
+    return activeFilter === "semua" || order.status === activeFilter;
+  });
+
   // 🔹 STATUS STYLE
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "bg-green-100 text-green-700";
-      case "confirmed":
-        return "bg-yellow-100 text-yellow-700";
-      case "pending":
-        return "bg-blue-100 text-blue-700";
-      case "cancelled":
-        return "bg-red-100 text-red-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
-  };
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case "selesai":
+      return "bg-green-100 text-green-700";
+    case "proses":
+      return "bg-yellow-100 text-yellow-700";
+    case "pending":
+      return "bg-blue-100 text-blue-700";
+    case "dibatalkan":
+      return "bg-red-100 text-red-700";
+  }
+};
 
   const getStatusLabel = (status: string) => {
     switch (status) {
@@ -238,8 +254,8 @@ export default function OrdersPage() {
         </header>
 
         {/* CONTENT */}
-        <main className="flex-1 overflow-auto p-8">
-          <div className="mb-8 grid grid-cols-1 gap-3 md:grid-cols-3">
+        <main className="flex-1 overflow-auto p-5">
+          <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-3">
             <div className="rounded-3xl border border-orange-100 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -263,7 +279,7 @@ export default function OrdersPage() {
                   </p>
                   <p className="mt-2 text-2xl font-bold text-orange-600">
                     {
-                      orders.filter((order) => order.status === "confirmed")
+                      orders.filter((order) => order.status === "proses")
                         .length
                     }
                   </p>
@@ -283,8 +299,8 @@ export default function OrdersPage() {
                     {
                       orders.filter(
                         (order) =>
-                          order.status === "completed" ||
-                          order.status === "cancelled",
+                          order.status === "selesai" ||
+                          order.status === "dibatalkan",
                       ).length
                     }
                   </p>
@@ -296,13 +312,13 @@ export default function OrdersPage() {
             </div>
           </div>
 
-          <div className="mb-8 flex flex-wrap gap-3">
+          <div className="mb-3 flex flex-wrap gap-3">
             {[
               { label: "Semua", value: "semua" },
               { label: "Pending", value: "pending" },
-              { label: "Proses", value: "confirmed" },
-              { label: "Selesai", value: "completed" },
-              { label: "Dibatalkan", value: "cancelled" },
+              { label: "Proses", value: "proses" },
+              { label: "Selesai", value: "selesai" },
+              { label: "Dibatalkan", value: "dibatalkan" },
             ].map((filter) => (
               <button
                 key={filter.value}
@@ -318,7 +334,7 @@ export default function OrdersPage() {
             ))}
           </div>
 
-          <div className="mb-6 flex items-center justify-between rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center justify-between rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
             <div>
               <h3 className="text-xl font-semibold text-amber-950">
                 Menampilkan Pesanan
@@ -340,7 +356,7 @@ export default function OrdersPage() {
               filteredOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="bg-white rounded-xl shadow border overflow-hidden"
+                  className="bg-white rounded-xl shadow border overflow-hidden flex flex-col "
                 >
                   {/* HEADER CARD */}
                   <div className="bg-orange-100 p-4 border-b">
@@ -367,7 +383,7 @@ export default function OrdersPage() {
                   </div>
 
                   {/* BODY */}
-                  <div className="p-4">
+                  <div className="p-4 flex-1 flex flex-col">
                     {/* LIST ITEM */}
                     <div className="border-b pb-3">
                       {order.items && order.items.length > 0 ? (
@@ -404,7 +420,7 @@ export default function OrdersPage() {
                     </div>
 
                     {/* TOTAL */}
-                    <div className="mt-4 flex justify-between items-center">
+                    <div className="mt-4 flex justify-between items-center ">
                       <span className="font-semibold text-gray-700">Total</span>
 
                       <span className="font-bold text-lg text-orange-600">

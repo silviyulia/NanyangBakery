@@ -14,10 +14,26 @@ import {
   CartesianGrid,
 } from "recharts";
 
+type Transaction = {
+  id: number;
+  created_at: string;
+  total_amount: string;
+  status: string;
+  items?: {
+    quantity: number;
+    product?: {
+      name: string;
+    };
+  }[];
+};
+
 export default function OwnerDashboard() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [dashboardData, setDashboardData] = useState<any>(null);
+  const [transactionData, setTransactionData] = useState<Transaction[]>([]);
+  const [filteredData, setFilteredData] = useState<Transaction[]>([]);
+
   const menuItems = [
     { name: "Dashboard", icon: "📊", href: "/owner" },
     { name: "Pesanan Real-time", icon: "🛒", href: "/owner/orders" },
@@ -36,19 +52,53 @@ export default function OwnerDashboard() {
       .catch((err) => console.error(err));
   }, []);
 
-    //Produk terlaris
-const [produkTerlaris, setProdukTerlaris] = useState("-");
-    useEffect(() => {
-      fetch("http://127.0.0.1:8000/api/reports/summary")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.produkTerlaris) {
-            setProdukTerlaris(data.produkTerlaris);
-          }
-        })
-        .catch((err) => console.error(err));
-    }, []);
-    
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/orders")
+      .then((res) => res.json())
+      .then((data) => {
+        setTransactionData(data);
+      })
+      .catch(console.error);
+  }, []);
+
+  // Data yang ditampilkan
+  const dataToShow = filteredData.length > 0 ? filteredData : transactionData;
+
+  // Tanggal hari ini
+  const today = new Date();
+
+  // Ambil hanya transaksi hari ini yang sudah selesai
+  const transaksiHariIni = dataToShow.filter((trx) => {
+    if (trx.status !== "selesai") return false;
+
+    const trxDate = new Date(trx.created_at);
+
+    return (
+      trxDate.getFullYear() === today.getFullYear() &&
+      trxDate.getMonth() === today.getMonth() &&
+      trxDate.getDate() === today.getDate()
+    );
+  });
+
+  // Hitung total pendapatan hari ini
+  const totalPendapatan = transaksiHariIni.reduce(
+    (sum, trx) => sum + Number(trx.total_amount || 0),
+    0,
+  );
+
+  //Produk terlaris
+  const [produkTerlaris, setProdukTerlaris] = useState("-");
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/reports/summary")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.produkTerlaris) {
+          setProdukTerlaris(data.produkTerlaris);
+        }
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
   const [salesData, setSalesData] = useState([]);
   useEffect(() => {
     fetch("http://127.0.0.1:8000/api/sales-chart")
@@ -144,19 +194,16 @@ const [produkTerlaris, setProdukTerlaris] = useState("-");
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-auto p-8">
-          <p className="text-gray-600 mb-8">Real-time overview sistem bakery</p>
 
           {/* Quick Stats */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
             {[
               {
-                label: "Pendapatan",
-                value: dashboardData?.today_revenue
-                  ? `Rp ${Number(dashboardData.today_revenue).toLocaleString()}`
-                  : "Rp 0",
+                label: "Total Menu",
+                value: dashboardData?.total_menu ?? 0,
               },
               {
-                label: "Total Transaksi",
+                label: "Total karyawan",
                 value: dashboardData?.total_transactions ?? 0,
               },
               {
@@ -189,8 +236,7 @@ const [produkTerlaris, setProdukTerlaris] = useState("-");
                   <p className="text-gray-600 text-sm">Pendapatan Hari Ini</p>
 
                   <h3 className="text-xl font-bold text-amber-950">
-                    Rp{" "}
-                    {Number(dashboardData?.today_revenue || 0).toLocaleString()}
+                    Rp {Number(totalPendapatan).toLocaleString("id-ID")}{" "}
                   </h3>
                 </div>
               </div>

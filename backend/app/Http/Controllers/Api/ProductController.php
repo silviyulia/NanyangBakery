@@ -53,6 +53,37 @@ public function index()
 
         ->get();
 
+    foreach ($products as $product) {
+
+    if ($product->category_id == 3) {
+
+        $recipes = DB::table('recipes')
+            ->join(
+                'ingredients',
+                'recipes.ingredient_id',
+                '=',
+                'ingredients.ingredient_id'
+            )
+            ->where('recipes.product_id', $product->product_id)
+            ->select(
+                'recipes.quantity',
+                'ingredients.qty'
+            )
+            ->get();
+
+        $stock = PHP_INT_MAX;
+
+        foreach ($recipes as $recipe) {
+
+            $available = floor($recipe->qty / $recipe->quantity);
+
+            $stock = min($stock, $available);
+        }
+
+        $product->stock = $stock == PHP_INT_MAX ? 0 : $stock;
+    }
+}
+
     return response()->json($products);
 }
 
@@ -173,5 +204,15 @@ public function index()
         ]);
 
     }
+
+public function productionProducts()
+{
+    $products = DB::table('products')
+        ->where('category_id', '!=', 3)
+        ->orderBy('name')
+        ->get();
+
+    return response()->json($products);
+}
 
 }

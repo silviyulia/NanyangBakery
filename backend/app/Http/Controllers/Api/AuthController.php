@@ -71,4 +71,42 @@ public function index()
     return response()->json($users);
 }
 
+public function update(Request $request, $id)
+{
+    $validated = $request->validate([
+        'name' => 'required',
+        'email' => 'required|email|unique:users,email,' . $id . ',user_id',
+        'phone' => 'required',
+        'role' => 'required',
+    ]);
+
+    $data = [
+        'name' => $validated['name'],
+        'email' => $validated['email'],
+        'phone' => $validated['phone'],
+        'role' => $validated['role'],
+    ];
+
+    if ($request->filled('password')) {
+        $data['password'] = bcrypt($request->password);
+    }
+
+    DB::table('users')
+        ->where('user_id', $id)
+        ->update($data);
+
+    return response()->json([
+        'message' => 'Karyawan berhasil diperbarui'
+    ]);
+}
+public function destroy($id)
+{
+    DB::table('users')
+        ->where('user_id', $id)
+        ->delete();
+
+    return response()->json([
+        'message' => 'Karyawan berhasil dihapus'
+    ]);
+}
 }

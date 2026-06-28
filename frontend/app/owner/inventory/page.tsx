@@ -9,10 +9,12 @@ export default function InventoryPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("Semua");
+  const [editMode, setEditMode] = useState(false);
+  const [editIngredientId, setEditIngredientId] = useState<number | null>(null);
   const [showTambahModal, setShowTambahModal] = useState(false);
   const [showInputModal, setShowInputModal] = useState(false);
 
-const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
   const [inputStok, setInputStok] = useState("");
 
   // form tambah bahan
@@ -53,11 +55,20 @@ const [selectedItem, setSelectedItem] = useState<any>(null);
 
   const handleAddIngredient = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/inventory", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      let url = "http://127.0.0.1:8000/api/inventory";
+      let method = "POST";
+
+      if (editMode) {
+        url = `http://127.0.0.1:8000/api/inventory/${editIngredientId}`;
+        method = "PUT";
+      }
+
+const res = await fetch(url, {
+  method,
+  headers:{
+    "Content-Type":"application/json",
+    "Accept":"application/json",
+  },
         body: JSON.stringify({
           ingredient_name: form.nama,
           qty: Number(form.stok),
@@ -68,15 +79,22 @@ const [selectedItem, setSelectedItem] = useState<any>(null);
 
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data.message);
+      if (!res.ok) {
+        throw new Error(data.message);
+      }
 
       await loadInventory();
+
       setForm({
         nama: "",
         stok: "",
         satuan: "Kg",
         min: "",
       });
+
+      setEditMode(false);
+      setEditIngredientId(null);
+
       setShowTambahModal(false);
     } catch (error) {
       console.error(error);
@@ -84,11 +102,11 @@ const [selectedItem, setSelectedItem] = useState<any>(null);
   };
 
   // STATUS LOGIC
-const getStatus = (qty: number, minimum_stock: number) => {
-  if (qty <= minimum_stock ) return "kritis";
-  if (qty <= minimum_stock * 2) return "rendah";
-  return "normal";
-};
+  const getStatus = (qty: number, minimum_stock: number) => {
+    if (qty <= minimum_stock) return "kritis";
+    if (qty <= minimum_stock * 2) return "rendah";
+    return "normal";
+  };
 
   const lowStockItems = stockData.filter(
     (item) => Number(item.qty) <= Number(item.minimum_stock),
@@ -104,40 +122,82 @@ const getStatus = (qty: number, minimum_stock: number) => {
     return true;
   });
 
-const handleInputStock = async () => {
-  try {
-    const res = await fetch(
-      `http://127.0.0.1:8000/api/inventory/${selectedItem.ingredient_id}/stock`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
+  const handleInputStock = async () => {
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/inventory/${selectedItem.ingredient_id}/stock`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            qty: Number(inputStok),
+          }),
         },
-        body: JSON.stringify({
-          qty: Number(inputStok),
-        }),
-      }
-    );
+      );
 
-    const data = await res.json();
+const text = await res.text();
 
-    if (!res.ok) {
-      throw new Error(data.message);
+console.log("RESPONSE DARI SERVER:", text);
+
+if (!res.ok) {
+  throw new Error(text);
+}
+      await loadInventory();
+
+      setShowInputModal(false);
+      setInputStok("");
+      setSelectedItem(null);
+    } catch (error) {
+      console.error(error);
     }
+  };
 
-    await loadInventory();
+  const handleDelete = async (ingredientId: number) => {
+    const confirmDelete = confirm("Apakah yakin ingin menghapus bahan ini?");
 
-    setShowInputModal(false);
-    setInputStok("");
-    setSelectedItem(null);
-  } catch (error) {
-    console.error(error);
-  }
-};
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/inventory/${ingredientId}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message);
+      }
+
+      alert("Bahan berhasil dihapus");
+
+      await loadInventory();
+    } catch (error: any) {
+      alert(error.message);
+      console.error(error);
+    }
+  };
+
+  const handleEdit = (item: any) => {
+    setEditMode(true);
+    setEditIngredientId(item.ingredient_id);
+
+    setForm({
+      nama: item.ingredient_name,
+      stok: item.qty.toString(),
+      satuan: item.unit,
+      min: item.minimum_stock.toString(),
+    });
+
+    setShowTambahModal(true);
+  };
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* SIDEBAR */}
       {/* SIDEBAR */}
       <aside
         className={`${sidebarOpen ? "w-64" : "w-0"} bg-gradient-to-b from-amber-800 to-amber-900 text-white transition-all duration-300 overflow-hidden flex flex-col shadow-lg`}
@@ -182,44 +242,44 @@ const handleInputStock = async () => {
         </div>
       </aside>
 
-{showInputModal && selectedItem && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center">
-    <div
-      className="absolute inset-0 bg-black/40"
-      onClick={() => setShowInputModal(false)}
-    />
+      {showInputModal && selectedItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowInputModal(false)}
+          />
 
-    <div className="relative bg-white p-6 rounded-xl shadow-lg w-full max-w-md z-10">
-      <h3 className="text-lg font-bold mb-4">
-        Input Stok - {selectedItem.ingredient_name}
-      </h3>
+          <div className="relative bg-white p-6 rounded-xl shadow-lg w-full max-w-md z-10">
+            <h3 className="text-lg font-bold mb-4">
+              Input Stok - {selectedItem.ingredient_name}
+            </h3>
 
-      <input
-        type="number"
-        placeholder="Jumlah stok masuk"
-        value={inputStok}
-        onChange={(e) => setInputStok(e.target.value)}
-        className="w-full border rounded-lg px-3 py-2"
-      />
+            <input
+              type="number"
+              placeholder="Jumlah stok masuk"
+              value={inputStok}
+              onChange={(e) => setInputStok(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2"
+            />
 
-      <div className="flex justify-end gap-2 mt-4">
-        <button
-          onClick={() => setShowInputModal(false)}
-          className="px-4 py-2 border rounded-lg"
-        >
-          Batal
-        </button>
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={() => setShowInputModal(false)}
+                className="px-4 py-2 border rounded-lg"
+              >
+                Batal
+              </button>
 
-        <button
-          onClick={handleInputStock}
-          className="px-4 py-2 bg-orange-500 text-white rounded-lg"
-        >
-          Simpan
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+              <button
+                onClick={handleInputStock}
+                className="px-4 py-2 bg-orange-500 text-white rounded-lg"
+              >
+                Simpan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MAIN */}
       <div className="flex-1 flex flex-col">
@@ -265,8 +325,9 @@ const handleInputStock = async () => {
               ></div>
 
               <div className="relative bg-white w-full max-w-md rounded-2xl shadow-lg p-6 z-10">
-                <h3 className="text-lg font-bold mb-4">Tambah Bahan</h3>
-
+                <h3 className="text-lg font-bold mb-4">
+                  {editMode ? "Edit Bahan" : "Tambah Bahan"}
+                </h3>
                 <div className="space-y-3">
                   <input
                     placeholder="Nama bahan"
@@ -290,9 +351,11 @@ const handleInputStock = async () => {
                     }
                     className="w-full border px-3 py-2 rounded-lg"
                   >
-                    <option>Kg</option>
-                    <option>Liter</option>
-                    <option>Gram</option>
+                    <option value="Kg">Kg</option>
+                    <option value="Gram">Gram</option>
+                    <option value="Butir">Butir</option>
+                    <option value="Ml">Ml</option>
+                    <option value="Liter">Liter</option>
                   </select>
 
                   <input
@@ -316,7 +379,7 @@ const handleInputStock = async () => {
                     onClick={handleAddIngredient}
                     className="bg-orange-500 text-white px-4 py-2 rounded-lg"
                   >
-                    Simpan
+                    {editMode ? "Update" : "Simpan"}
                   </button>
                 </div>
               </div>
@@ -394,15 +457,31 @@ const handleInputStock = async () => {
                           </td>
 
                           <td className="px-6 py-4">
-                            <button
-                              onClick={() => {
-                                setSelectedItem(item);
-                                setShowInputModal(true);
-                              }}
-                              className="font-medium text-orange-600 hover:underline"
-                            >
-                              tambah jumlah
-                            </button>
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => handleEdit(item)}
+                                className="font-medium text-blue-600 hover:underline"
+                              >
+                                Edit
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setSelectedItem(item);
+                                  setShowInputModal(true);
+                                }}
+                                className="font-medium text-orange-600 hover:underline"
+                              >
+                                Tambah
+                              </button>
+
+                              <button
+                                onClick={() => handleDelete(item.ingredient_id)}
+                                className="font-medium text-red-600 hover:underline"
+                              >
+                                Hapus
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );

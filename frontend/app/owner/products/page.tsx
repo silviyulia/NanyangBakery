@@ -525,7 +525,7 @@ export default function ProductsPage() {
             {filteredProducts.map((p) => (
               <div
                 key={p.product_id}
-                className="bg-white p-4 rounded-xl border shadow"
+                className="bg-white p-2 rounded-xl border shadow"
               >
                 <div className="h-32 w-full overflow-hidden rounded-lg">
                   <img
@@ -549,31 +549,33 @@ export default function ProductsPage() {
                   Rp {Number(p.price).toLocaleString("id-ID")}
                 </p>
 
-                  <span
-                    className={`inline-block mt-2 px-2 py-1 rounded text-xs font-semibold ${
-                      Number(p.stock) <= 5
-                        ? "bg-red-100 text-red-700"
-                        : "bg-green-100 text-green-700"
-                    }`}
-                  >
-                    Stok: {p.stock}
-                  </span>
-                  
+                <span
+                  className={`inline-block mt-2 px-2 py-1 rounded text-xs font-semibold ${
+                    Number(p.stock) <= 5
+                      ? "bg-red-100 text-red-700"
+                      : "bg-green-100 text-green-700"
+                  }`}
+                >
+                  Stok: {p.stock}
+                </span>
+
+                <span
+                  className={`text-xs px-2 py-1 rounded mt-2 inline-block ${
+                    p.status === "active"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-600"
+                  }`}
+                >
+                  {p.status}
+                </span>
+
+                <div className="h-7 mt-3">
                   {Number(p.stock) <= 0 && (
-                    <div className="mt-2 bg-red-500 text-white text-center py-1 rounded text-xs font-bold">
+                    <div className="bg-red-500 text-white text-center py-1 rounded text-xs font-bold">
                       STOK HABIS
                     </div>
                   )}
-
-                  <span
-                    className={`text-xs px-2 py-1 rounded mt-2 inline-block ${
-                      p.status === "active"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-600"
-                    }`}
-                  >
-                    {p.status}
-                  </span>
+                </div>
                 
                 {/* BUTTON */}
                 <div className="flex gap-2 mt-3">
@@ -583,9 +585,10 @@ export default function ProductsPage() {
                   >
                     Edit
                   </button>
+
                   <button
                     onClick={() => handleDelete(p.product_id)}
-                    className="px-3 border text-red-500 rounded-lg hover:bg-red-50"
+                    className="flex-1 border text-red-500 rounded-lg hover:bg-red-50"
                   >
                     Hapus
                   </button>

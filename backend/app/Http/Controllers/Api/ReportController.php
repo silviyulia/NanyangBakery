@@ -65,6 +65,7 @@ class ReportController extends Controller
             : '-',
     ]);
 }
+
     public function orders()
 {
     $orders = Order::with('table')
@@ -89,4 +90,20 @@ class ReportController extends Controller
 
     return response()->json($orders);
 }
+
+    public function salesChart()
+{
+    $sales = Order::select(
+            DB::raw('DATE(created_at) as date'),
+            DB::raw('SUM(total_amount) as total')
+        )
+        ->where('status', 'selesai')
+        ->groupBy('date')
+        ->orderBy('date')
+        ->take(7)
+        ->get();
+
+    return response()->json($sales);
+}
+
 }

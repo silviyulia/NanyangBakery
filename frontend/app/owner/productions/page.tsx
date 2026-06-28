@@ -50,14 +50,17 @@ export default function ProductionPage() {
     loadProducts();
     loadProductions();
   }, []);
-  const loadProducts = async () => {
-    const res = await fetch("http://127.0.0.1:8000/api/products");
+const loadProducts = async () => {
+  const res = await fetch("http://127.0.0.1:8000/api/products/production");
 
-    const data = await res.json();
+  console.log("Status:", res.status);
 
-    setProducts(data);
-  };
+  const data = await res.json();
 
+  console.log("DATA =", data);
+
+  setProducts(data);
+};
   const [productions, setProductions] = useState<any[]>([]);
   const [totalProduction, setTotalProduction] = useState(0);
   const [productCount, setProductCount] = useState(0);
@@ -259,7 +262,7 @@ export default function ProductionPage() {
             </h1>
 
             <p className="text-gray-600">
-              Catat jumlah produk yang diproduksi hari ini
+              Catat jumlah produk yang diproduksi 
             </p>
           </div>
 
@@ -268,7 +271,7 @@ export default function ProductionPage() {
             <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-400">
               <div className="flex justify-between">
                 <div>
-                  <p className="text-gray-500 text-sm">Produksi Hari Ini</p>
+                  <p className="text-gray-500 text-sm">Produksi </p>
 
                   <h2 className="text-3xl font-bold text-amber-950">
                     {totalProduction}
@@ -359,7 +362,7 @@ export default function ProductionPage() {
           {/* Riwayat */}
           <div className="bg-white rounded-xl shadow-md p-8">
             <h2 className="text-xl font-bold text-amber-950 mb-6">
-              Riwayat Produksi Hari Ini
+              Riwayat Produksi 
             </h2>
 
             <div className="overflow-x-auto">

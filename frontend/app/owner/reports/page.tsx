@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Table } from "flowbite-react";
 import Link from "next/link";
-import * as XLSX from "xlsx";
+import XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
@@ -35,15 +35,23 @@ type Transaction = {
     quantity: number;
     product?: {
       name: string;
+      price: number;
     };
   }[];
   total_amount: string;
   status: string;
-
+  transaction?: {
+  transaction_id: number;
+  kasir?: {
+    name: string;
+        user_id?: number;
+  } | null;
   waitres?: {
     name: string;
   };
+  
 };
+}
 
 export default function ReportsPage() {
   const router = useRouter();
@@ -52,7 +60,7 @@ export default function ReportsPage() {
 
   // DATA LAPORAN
   const [filteredData, setFilteredData] = useState<Transaction[]>([]);
-
+  const [isFiltered, setIsFiltered] = useState(false);
   // FILTER
   const [periode, setPeriode] = useState("hari_ini");
   const [tglMulai, setTglMulai] = useState("");
@@ -130,13 +138,33 @@ export default function ReportsPage() {
 
         return date >= new Date(tglMulai) && date <= new Date(tglSelesai);
       });
+    } else if (periode === "kemarin") {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const dateString = yesterday.toISOString().split("T")[0];
+
+      result = transactionData.filter((trx) =>
+        trx.created_at.startsWith(dateString),
+      );
+    } else if (periode === "minggu_ini") {
+      const now = new Date();
+
+      const firstDay = new Date(now);
+      firstDay.setDate(now.getDate() - now.getDay());
+
+      result = transactionData.filter((trx) => {
+        const d = new Date(trx.created_at);
+        return d >= firstDay && d <= now;
+      });
     }
 
     setFilteredData(result);
+    setFilteredData(result);
+    setIsFiltered(true);
   };
 
-  const dataToShow = filteredData.length > 0 ? filteredData : transactionData;
-
+  const dataToShow = isFiltered ? filteredData : transactionData;
   const transaksiSelesai = dataToShow.filter((trx) => trx.status === "selesai");
 
   const totalPendapatan = transaksiSelesai.reduce(
@@ -156,32 +184,154 @@ export default function ReportsPage() {
     pendapatan: Number(trx.total_amount),
   }));
 
+  //DOWNLOAD EXCEL
   const downloadExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(dataToShow);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Laporan");
+  const data: any[] = [];
 
-    XLSX.writeFile(wb, "laporan_keuangan.xlsx");
-  };
-
-  const downloadPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Laporan Keuangan Bakery", 14, 15);
-
-    autoTable(doc, {
-      startY: 40,
-      head: [["ID", "Tanggal", "Meja", "Total", "Status"]],
-      body: dataToShow.map((trx) => [
-        trx.id,
-        new Date(trx.created_at).toLocaleDateString("id-ID"),
-        `Meja ${trx.table_id}`,
-        `Rp ${Number(trx.total_amount).toLocaleString("id-ID")}`,
-        trx.status,
-      ]),
+  // RINGKASAN
+  data.push({
+    Keterangan: " RINGKASAN LAPORAN= ",
+  });
+  data.push({
+    Keterangan: "Total Pendapatan",
+    Nilai: totalPendapatan,
+  });
+  data.push({
+    Keterangan: "Total Produk Terjual",
+    Nilai: totalProduk,
+  });
+  data.push({
+    Keterangan: "Produk Terlaris",
+    Nilai: produkTerlaris,
+  });
+  data.push({});
+  data.push({});
+  data.push({
+    Keterangan: " DETAIL TRANSAKSI= ",
+  });
+  transaksiSelesai.forEach((trx) => {
+    data.push({
+      ID: trx.id,
+      Tanggal: new Date(trx.created_at).toLocaleDateString("id-ID"),
+      Meja: trx.table_id,
+      Kasir: trx.transaction?.kasir?.name || "-",
+      Total: Number(trx.total_amount),
+      Status: trx.status,
     });
 
-    doc.save("laporan_keuangan.pdf");
+    // PRODUK DALAM TRANSAKSI
+    trx.items?.forEach((item: any) => {
+      data.push({
+        Produk: item.product?.name || "-",
+        Qty: item.quantity,
+        Harga: Number(item.price),
+        Subtotal: Number(item.price) * item.quantity,
+      });
+    });
+
+    data.push({});
+  });
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Laporan");
+  XLSX.writeFile(wb, "Laporan_Bakery.xlsx");
+};
+
+  //DOWNLOAD PDF
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("LAPORAN PENJUALAN BAKERY", 14, 18);
+    doc.setFontSize(11);
+    doc.text(
+      `Tanggal Cetak : ${new Date().toLocaleDateString("id-ID")}`,
+      14,
+      26,
+    );
+
+    // TOTAL
+    const transaksiSelesai = dataToShow.filter(
+      (trx) => trx.status === "selesai",
+    );
+    const totalPendapatan = transaksiSelesai.reduce(
+      (sum, trx) => sum + Number(trx.total_amount),
+      0,
+    );
+    const totalProduk = transaksiSelesai.reduce(
+      (sum, trx) =>
+        sum +
+        (trx.items?.reduce((subtotal, item) => subtotal + item.quantity, 0) ||
+          0),
+      0,
+    );
+
+    doc.setFontSize(13);
+    doc.text("Ringkasan", 14, 38);
+
+    autoTable(doc, {
+      startY: 42,
+      head: [["Keterangan", "Nilai"]],
+      body: [
+        ["Total Pendapatan", `Rp ${totalPendapatan.toLocaleString("id-ID")}`],
+        ["Jumlah Transaksi", transaksiSelesai.length],
+        ["Total Produk Terjual", totalProduk],
+      ],
+    });
+
+    // PRODUK TERJUAL
+    const produkMap: any = {};
+    transaksiSelesai.forEach((trx) => {
+      trx.items?.forEach((item) => {
+        const nama = item.product?.name || "Produk";
+        if (!produkMap[nama]) {
+          produkMap[nama] = 0;
+        }
+        produkMap[nama] += item.quantity;
+      });
+    });
+    const produkRows = Object.entries(produkMap).map(([nama, qty]: any) => [
+      nama,
+      qty,
+    ]);
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 10,
+      head: [["Produk", "Jumlah Terjual"]],
+      body: produkRows,
+    });
+
+ 
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 10,
+      head: [["No", "Tanggal", "Meja", "Item", "Total", "Status", "Kasir"]],
+      body: transaksiSelesai.map((trx) => {
+        const daftarProduk =
+          trx.items && trx.items.length > 0
+            ? trx.items
+                .map(
+                  (item) =>
+                    `${item.product?.name ?? "Produk"} (${item.quantity})`,
+                )
+                .join("\n")
+            : "-";
+
+        return [
+          String(trx.id),
+          new Date(trx.created_at).toLocaleDateString("id-ID"),
+          `Meja ${trx.table_id}`,
+          daftarProduk,
+          `Rp ${Number(trx.total_amount).toLocaleString("id-ID")}`,
+          trx.status,
+          trx.transaction?.kasir?.name || "-",
+        ];
+      }),
+      styles: {
+        cellPadding: 3,
+        fontSize: 9,
+        valign: "middle",
+      },
+    });
+    doc.save("Laporan_Penjualan_Bakery.pdf");
   };
 
   const [inventory, setInventory] = useState<any[]>([]);
@@ -270,14 +420,14 @@ export default function ReportsPage() {
         </header>
 
         {/* CONTENT */}
-        <main className="flex-1 overflow-auto p-8">
+        <main className="flex-1 overflow-auto p-4">
           {/* FILTER LAPORAN */}
-          <div className="mb-8 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <p className="text-sm font-semibold text-gray-800 mb-5">
+          <div className="mb-3 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <p className="text-sm font-semibold text-gray-800 mb-3">
               Filter Laporan
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
               {/* PERIODE */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-gray-500">
@@ -408,7 +558,6 @@ export default function ReportsPage() {
 
           <div className="bg-white p-6 rounded-xl shadow">
             <h3 className="font-bold mb-4 text-amber-950">Detail Transaksi</h3>
-
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left text-gray-500">
                 <thead className="text-xs text-gray-700 uppercase bg-gray-100">
@@ -424,7 +573,7 @@ export default function ReportsPage() {
                 </thead>
 
                 <tbody>
-                  {transactionData
+                  {dataToShow
                     .filter((trx) => trx.status === "selesai")
                     .map((trx) => (
                       <tr
@@ -458,9 +607,7 @@ export default function ReportsPage() {
                           </span>
                         </td>
 
-                        <td className="px-6 py-4">
-                          {trx.waitres?.name || "-"}
-                        </td>
+                        <td className="px-6 py-4">{trx.transaction?.kasir?.name || "-"}</td>
                       </tr>
                     ))}
                 </tbody>

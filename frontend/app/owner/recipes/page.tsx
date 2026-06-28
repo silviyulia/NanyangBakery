@@ -2,8 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Menu, X, LogOut } from "lucide-react";
+import { Menu, User, LogOut, X } from "lucide-react";
 import Link from "next/link";
+
+interface Product {
+  product_id: number;
+  category_id: number;
+  name: string;
+  price?: number;
+  status?: string;
+}
 
 export default function RecipesPage() {
   const router = useRouter();
@@ -26,6 +34,7 @@ export default function RecipesPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [ingredientsMaster, setIngredientsMaster] = useState<any[]>([]);
   const [selectedProduct, setSelectedProduct] = useState("");
+
   const loadProducts = async () => {
     const res = await fetch("http://127.0.0.1:8000/api/products");
     const data = await res.json();
@@ -129,7 +138,13 @@ export default function RecipesPage() {
         url = `http://127.0.0.1:8000/api/recipes/${editRecipeId}`;
         method = "PUT";
       }
-
+      console.log({
+        url,
+        method,
+        editRecipeId,
+        selectedProduct,
+        ingredients,
+      });
       const res = await fetch(url, {
         method,
         headers: {
@@ -167,8 +182,63 @@ export default function RecipesPage() {
     }
   };
 
+  const handleDeleteRecipe = async (productId: number) => {
+    const confirmDelete = confirm(
+      "Yakin ingin menghapus seluruh resep produk ini?",
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/recipes/${productId}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message);
+        return;
+      }
+
+      alert(data.message);
+
+      loadRecipes();
+    } catch (error) {
+      console.error(error);
+      alert("Gagal menghapus resep.");
+    }
+  };
+
+  const filteredRecipes = groupedRecipes.filter((recipe: any) => {
+    const product = products.find((p) => p.product_id === recipe.product_id);
+    if (!product) return false;
+    if (activeTab === "Semua") return true;
+    if (activeTab === "Roti&Pastry") return product.category_id === 1;
+    if (activeTab === "Kue&Cake") return product.category_id === 2;
+    if (activeTab === "Minuman") return product.category_id === 3;
+    return true;
+  });
+
+ const [inventory, setInventory] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/inventory")
+      .then((res) => res.json())
+      .then((data) => setInventory(data))
+      .catch(console.error);
+  }, []);
+
+  const lowStockItems = inventory.filter(
+    (item) => Number(item.qty) <= Number(item.minimum_stock),
+  );
+
+
   return (
-    <div className="flex h-screen bg-gray-50">
+     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
       <aside
         className={`${
@@ -220,15 +290,25 @@ export default function RecipesPage() {
         {/* Top Header */}
         <header className="bg-gradient-to-r from-amber-800 to-amber-900 text-white shadow-md p-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 hover:bg-amber-700 rounded-lg transition"
-            >
-              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            <button onClick={() => setSidebarOpen(!sidebarOpen)}>
+              {sidebarOpen ? <X /> : <Menu />}
             </button>
-            <h2 className="text-3xl font-bold">Resep Produk</h2>
+            <h2 className="text-3xl font-bold">Dashboard Monitoring</h2>
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
+              🔔 Notifikasi ({lowStockItems.length})
+            </button>
+            <div className="flex items-center gap-2 bg-amber-500 bg-opacity-20 px-4 py-2 rounded-lg">
+              <User size={20} />
+              <div>
+                <p className="text-sm font-semibold">Admin User</p>
+                <p className="text-xs text-amber-200">Owner</p>
+              </div>
+            </div>
           </div>
         </header>
+
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto p-8 space-y-6 bg-[#f6efe9]">
@@ -400,7 +480,7 @@ export default function RecipesPage() {
 
           {/* GRID */}
           <div className="grid md:grid-cols-2 gap-6">
-            {(groupedRecipes as any[]).map((item: any, i: number) => (
+            {filteredRecipes.map((item: any, i: number) => (
               <div
                 key={i}
                 className="bg-white rounded-2xl shadow border overflow-hidden"
@@ -409,21 +489,25 @@ export default function RecipesPage() {
                   <div>
                     <h3 className="font-bold text-lg">{item.product_name}</h3>
                   </div>
-                  <button
-                    onClick={() => {
-                      console.log(item);
-                      handleEdit(item);
-                    }}
-                    className="bg-gray-300 px-4 py-1 rounded-full text-sm"
-                  >
-                    Edit
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEdit(item)}
+                      className="bg-green-600 text-white px-4 py-1 rounded-full text-sm"
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      onClick={() => handleDeleteRecipe(item.product_id)}
+                      className="bg-red-500 text-white px-4 py-1 rounded-full text-sm"
+                    >
+                      Hapus
+                    </button>
+                  </div>
                 </div>
 
                 <div className="p-4">
-                  <p className="text-sm mb-3 font-medium">
-                    Komposisi per 1 unit:
-                  </p>
+                  <p className="text-sm mb-3 font-medium">Komposisi bahan:</p>
 
                   <div className="space-y-2">
                     {item.bahan.map((b: any, idx: number) => (

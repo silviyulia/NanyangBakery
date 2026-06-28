@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\AuthController;
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::get('/users', [AuthController::class, 'index']);
+Route::put('/users/{id}', [AuthController::class, 'update']);
+Route::delete('/users/{id}', [AuthController::class, 'destroy']);
 
 
 use App\Http\Controllers\Api\ProductController;
@@ -13,6 +15,7 @@ Route::get('/products', [ProductController::class, 'index']);
 Route::post('/products', [ProductController::class, 'store']);
 Route::put('/products/{id}', [ProductController::class, 'update']);
 Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+Route::get('/products/production', [ProductController::class, 'productionProducts']);
 
 use App\Http\Controllers\Api\CategoryController;
 Route::get('/categories', [CategoryController::class, 'index']);
@@ -45,6 +48,8 @@ Route::get('/transactions/daily-summary', [TransactionController::class, 'dailyS
 use App\Http\Controllers\Api\DashboardController;
 Route::get('/dashboard', [DashboardController::class, 'index']);
 Route::get('/sales-chart', [DashboardController::class, 'salesChart']);
+Route::get('/reports/summary', [DashboardController::class, 'summary']);
+Route::get('/reports/orders', [DashboardController::class, 'orders']);
 
 use App\Http\Controllers\Api\ReportController;
 Route::get('/reports', [ReportController::class, 'index']);
@@ -69,8 +74,8 @@ Route::put('/inventory/{id}/stock', [InventoryController::class, 'updateStock'])
 use App\Http\Controllers\Api\RecipeController;
 Route::get('/recipes', [RecipeController::class,'index']);
 Route::post('/recipes', [RecipeController::class,'store']);
-Route::put('/recipes/{id}', [RecipeController::class,'update']);
-Route::delete('/recipes/{id}', [RecipeController::class,'destroy']);
+Route::put('/recipes/{productId}', [RecipeController::class, 'update']);
+Route::delete('/recipes/{productId}', [RecipeController::class, 'destroy']);
 
 use App\Http\Controllers\Api\PaymentController;
 Route::post('/payment/create',[PaymentController::class,'create']);

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Menu, LogOut, X } from "lucide-react";
+import { Menu, LogOut, X, User } from "lucide-react";
 import Link from "next/link";
 
 interface Employee {
@@ -56,29 +56,108 @@ export default function EmployeesPage() {
 
   // Submit tambah karyawan
   const handleSubmit = async () => {
-    setIsLoading(true);
-    setError("");
-    setSuccess("");
+  setIsLoading(true);
+  setError("");
+  setSuccess("");
 
-    const res = await fetch("http://127.0.0.1:8000/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+  const url = editMode
+    ? `http://127.0.0.1:8000/api/users/${editId}`
+    : "http://127.0.0.1:8000/api/register";
+
+  const method = editMode ? "PUT" : "POST";
+
+  const body: any = {
+    name: form.name,
+    email: form.email,
+    phone: form.phone,
+    role: form.role,
+  };
+
+  if (form.password !== "") {
+    body.password = form.password;
+  }
+
+  const res = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    setError(data.message || "Gagal menyimpan data");
+    setIsLoading(false);
+    return;
+  }
+
+  setSuccess(
+    editMode
+      ? "Data karyawan berhasil diupdate!"
+      : "Karyawan berhasil ditambahkan!"
+  );
+
+  setShowModal(false);
+  setEditMode(false);
+  setEditId(null);
+
+  setForm({
+    name: "",
+    email: "",
+    password: "",
+    phone: "",
+    role: "kasir",
+  });
+
+  fetchEmployees();
+
+  setIsLoading(false);
+};
+
+  const [editMode, setEditMode] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const handleEdit = (emp: Employee) => {
+    setEditMode(true);
+    setEditId(emp.user_id);
+    setForm({
+      name: emp.name,
+      email: emp.email,
+      password: "",
+      phone: emp.phone,
+      role: emp.role,
+    });
+    setShowModal(true);
+  };
+  const handleDelete = async (id: number) => {
+    const ok = confirm("Yakin ingin menghapus karyawan?");
+
+    if (!ok) return;
+
+    const res = await fetch(`http://127.0.0.1:8000/api/users/${id}`, {
+      method: "DELETE",
     });
 
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.message || "Gagal menambahkan karyawan.");
-      setIsLoading(false);
-      return;
-    }
+    const data = await res.json();
 
-    setSuccess("Karyawan berhasil ditambahkan!");
-    setForm({ name: "", email: "", password: "", phone: "", role: "kasir" });
-    setIsLoading(false);
-    setShowModal(false);
-    fetchEmployees(); // refresh tabel
+    alert(data.message);
+
+    fetchEmployees();
   };
+
+  const [inventory, setInventory] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/inventory")
+      .then((res) => res.json())
+      .then((data) => setInventory(data))
+      .catch(console.error);
+  }, []);
+
+  const lowStockItems = inventory.filter(
+    (item) => Number(item.qty) <= Number(item.minimum_stock),
+  );
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -90,7 +169,9 @@ export default function EmployeesPage() {
       >
         <div className="p-6 border-b border-amber-700">
           <div className="flex items-center gap-3">
-            <div className="bg-orange-500 rounded-lg p-2 font-bold text-lg">🥖</div>
+            <div className="bg-orange-500 rounded-lg p-2 font-bold text-lg">
+              🥖
+            </div>
             <div>
               <h1 className="font-bold text-lg">Bakery POS</h1>
               <p className="text-xs text-amber-200">Owner</p>
@@ -126,157 +207,191 @@ export default function EmployeesPage() {
         </div>
       </aside>
 
-      {/* MODAL TAMBAH KARYAWAN */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setShowModal(false)}
-          />
-          <div className="relative bg-white w-full max-w-md rounded-2xl shadow-lg p-6 z-10">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold">Tambah Karyawan</h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-black text-xl"
-              >
-                ✖
-              </button>
-            </div>
-
-            {error && (
-              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {error}
-              </div>
-            )}
-
-            <div className="space-y-3">
-              <input
-                type="text"
-                placeholder="Nama"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border px-3 py-2 rounded-lg"
-              />
-              <input
-                type="email"
-                placeholder="Email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full border px-3 py-2 rounded-lg"
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full border px-3 py-2 rounded-lg"
-              />
-              <input
-                type="text"
-                placeholder="No. Telepon"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full border px-3 py-2 rounded-lg"
-              />
-              <select
-                value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="w-full border px-3 py-2 rounded-lg"
-              >
-                <option value="kasir">Kasir</option>
-                <option value="waitres">Waitres</option>
-                <option value="owner">Owner</option>
-              </select>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 border rounded-lg"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={isLoading}
-                className={`bg-orange-500 text-white px-4 py-2 rounded-lg ${
-                  isLoading ? "opacity-75" : ""
-                }`}
-              >
-                {isLoading ? "Menyimpan..." : "Simpan"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
+        {/* Top Header */}
         <header className="bg-gradient-to-r from-amber-800 to-amber-900 text-white shadow-md p-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button onClick={() => setSidebarOpen(!sidebarOpen)}>
               {sidebarOpen ? <X /> : <Menu />}
             </button>
-            <h2 className="text-3xl font-bold">Karyawan</h2>
+            <h2 className="text-3xl font-bold">Dashboard Monitoring</h2>
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
+              🔔 Notifikasi ({lowStockItems.length})
+            </button>
+            <div className="flex items-center gap-2 bg-amber-500 bg-opacity-20 px-4 py-2 rounded-lg">
+              <User size={20} />
+              <div>
+                <p className="text-sm font-semibold">Admin User</p>
+                <p className="text-xs text-amber-200">Owner</p>
+              </div>
+            </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-8 space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Data Karyawan</h2>
-            <button
-              onClick={() => setShowModal(true)}
-              className="bg-orange-500 text-white px-4 py-2 rounded-lg"
-            >
-              + Tambah Karyawan
-            </button>
-          </div>
+        {/* MODAL TAMBAH KARYAWAN */}
+        {showModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setShowModal(false)}
+            />
+            <div className="relative bg-white w-full max-w-md rounded-2xl shadow-lg p-6 z-10">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold">Tambah Karyawan</h3>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-gray-400 hover:text-black text-xl"
+                >
+                  ✖
+                </button>
+              </div>
 
-          {success && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-              {success}
+              {error && (
+                <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Nama"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full border px-3 py-2 rounded-lg"
+                />
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="w-full border px-3 py-2 rounded-lg"
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={form.password}
+                  onChange={(e) =>
+                    setForm({ ...form, password: e.target.value })
+                  }
+                  className="w-full border px-3 py-2 rounded-lg"
+                />
+                <input
+                  type="text"
+                  placeholder="No. Telepon"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className="w-full border px-3 py-2 rounded-lg"
+                />
+                <select
+                  value={form.role}
+                  onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  className="w-full border px-3 py-2 rounded-lg"
+                >
+                  <option value="kasir">Kasir</option>
+                  <option value="waitres">Waitres</option>
+                  <option value="owner">Owner</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 border rounded-lg"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={isLoading}
+                  className={`bg-orange-500 text-white px-4 py-2 rounded-lg ${
+                    isLoading ? "opacity-75" : ""
+                  }`}
+                >
+                  {isLoading ? "Menyimpan..." : "Simpan"}
+                </button>
+              </div>
             </div>
-          )}
+          </div>
+        )}
 
-          <div className="bg-white rounded-xl shadow border overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-200 text-gray-700">
-                <tr>
-                  <th className="px-6 py-3">No.</th>
-                  <th className="px-6 py-3">Nama</th>
-                  <th className="px-6 py-3">Email</th>
-                  <th className="px-6 py-3">No. Telepon</th>
-                  <th className="px-6 py-3">Role</th>
-                  <th className="px-6 py-3 text-center">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employees.length === 0 ? (
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col">
+          <main className="flex-1 overflow-auto p-8 space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Data Karyawan</h2>
+              <button
+                onClick={() => setShowModal(true)}
+                className="bg-orange-500 text-white px-4 py-2 rounded-lg"
+              >
+                + Tambah Karyawan
+              </button>
+            </div>
+
+            {success && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+                {success}
+              </div>
+            )}
+
+            <div className="bg-white rounded-xl shadow border overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-gray-200 text-gray-700">
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
-                      Belum ada data karyawan.
-                    </td>
+                    <th className="px-6 py-3">No.</th>
+                    <th className="px-6 py-3">Nama</th>
+                    <th className="px-6 py-3">Email</th>
+                    <th className="px-6 py-3">No. Telepon</th>
+                    <th className="px-6 py-3">Role</th>
+                    <th className="px-6 py-3 text-center">Aksi</th>
                   </tr>
-                ) : (
-                  employees.map((emp, i) => (
-                    <tr key={emp.user_id} className="border-t hover:bg-gray-50">
-                      <td className="px-6 py-4">{i + 1}</td>
-                      <td className="px-6 py-4 font-medium">{emp.name}</td>
-                      <td className="px-6 py-4">{emp.email}</td>
-                      <td className="px-6 py-4">{emp.phone}</td>
-                      <td className="px-6 py-4 capitalize">{emp.role}</td>
-                      <td className="px-6 py-4 text-center space-x-2">
-                        <button className="text-blue-500 hover:underline text-sm">Edit</button>
-                        <button className="text-red-500 hover:underline text-sm">Hapus</button>
+                </thead>
+                <tbody>
+                  {employees.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-6 py-8 text-center text-gray-400"
+                      >
+                        Belum ada data karyawan.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </main>
+                  ) : (
+                    employees.map((emp, i) => (
+                      <tr
+                        key={emp.user_id}
+                        className="border-t hover:bg-gray-50"
+                      >
+                        <td className="px-6 py-4">{i + 1}</td>
+                        <td className="px-6 py-4 font-medium">{emp.name}</td>
+                        <td className="px-6 py-4">{emp.email}</td>
+                        <td className="px-6 py-4">{emp.phone}</td>
+                        <td className="px-6 py-4 capitalize">{emp.role}</td>
+                        <td className="px-6 py-4 text-center space-x-2">
+                          <button
+                            onClick={() => handleEdit(emp)}
+                            className="text-blue-500 hover:underline text-sm"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(emp.user_id)}
+                            className="text-red-500 hover:underline"
+                          >
+                            Hapus
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </main>
+        </div>
       </div>
     </div>
   );
