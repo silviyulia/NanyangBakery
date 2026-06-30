@@ -247,7 +247,8 @@ export default function transaksiPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [amountPaid, setAmountPaid] = useState(0);
-  const grandTotal = Math.round(totalPrice * 1.1);
+  //const grandTotal = Math.round(totalPrice * 1.1);
+  const grandTotal = totalPrice
   const changeAmount =
     paymentMethod === "cash" ? Math.max(0, amountPaid - grandTotal) : 0;
   const [processing, setProcessing] = useState(false);
@@ -329,14 +330,15 @@ export default function transaksiPage() {
       }
     );
 
+const trxData = await trxRes.json();
 
-    const trxData = await trxRes.json();
+console.log("STATUS :", trxRes.status);
+console.log("DATA :", trxData);
 
-
-    if(!trxRes.ok){
-      console.log(trxData);
-      throw new Error("Gagal membuat transaksi");
-    }
+if (!trxRes.ok) {
+  alert(JSON.stringify(trxData));
+  return;
+}
 
 
 
@@ -600,21 +602,21 @@ export default function transaksiPage() {
                       <span>Rp {totalPrice.toLocaleString("id-ID")}</span>
                     </div>
 
-                    <div className="flex justify-between">
+                   {/* <div className="flex justify-between">
                       <span>PPN 10%</span>
 
                       <span>
                         Rp{" "}
                         {Math.round(totalPrice * 0.1).toLocaleString("id-ID")}
                       </span>
-                    </div> 
+                    </div> */}
 
                     <div className="flex justify-between bg-orange-100 p-4 rounded-2xl font-bold text-lg">
                       <span>Total</span>
 
                       <span className="text-orange-600">
                         Rp{" "}
-                        {Math.round(totalPrice * 1.1).toLocaleString("id-ID")}
+                        {totalPrice.toLocaleString("id-ID")}
                       </span>
                     </div>
 
