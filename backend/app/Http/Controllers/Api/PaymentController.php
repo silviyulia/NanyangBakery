@@ -13,44 +13,37 @@ class PaymentController extends Controller
 public function create(Request $request)
 {
 
-Config::$serverKey = config('midtrans.server_key');
-
-Config::$isProduction = false;
-
+Config::$serverKey = config('midtrans.serverKey');
+Config::$isProduction = config('midtrans.isProduction');
 Config::$isSanitized = true;
-
 Config::$is3ds = true;
-
 
 
 $params = [
 
-'transaction_details'=>[
+    'transaction_details' => [
 
-'order_id'=>$request->order_id,
+        'order_id' => $order->order_id,
 
-'gross_amount'=>$request->amount
+        'gross_amount' => $order->total,
 
-],
+    ],
 
+    'customer_details' => [
 
-'customer_details'=>[
+        'first_name' => $customer->name,
 
-'first_name'=>'Kasir'
+        'email' => $customer->email,
 
-]
-
+    ]
 
 ];
-
 
 $snapToken = Snap::getSnapToken($params);
 
 
 return response()->json([
-
-'token'=>$snapToken
-
+    'token' => $snapToken
 ]);
 
 

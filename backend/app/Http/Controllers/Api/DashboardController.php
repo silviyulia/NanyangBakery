@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use App\Models\Product;
 use App\Models\Order;
-
+use App\Models\User;
 
 class DashboardController extends Controller
 {
@@ -15,7 +15,7 @@ class DashboardController extends Controller
         return response()->json([
             'total_menu' => Product::count(),
 
-            'active_employees' => 0,
+            'active_employees' => User::whereIn('role', ['kasir', 'waitres',])->count(),
 
             'today_revenue' => Order::whereDate('created_at', today())
                 ->sum('total_amount'),

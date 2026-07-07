@@ -86,9 +86,18 @@ export default function KasirDashboard() {
   const getOrderTotal = (items: any[]) =>
     items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const filteredOrders = orders.filter(
-    (order) => activeFilter === "semua" || order.status === activeFilter,
-  );
+  const filteredOrders = orders.filter((order) => {
+    console.log(
+      "Filter:",
+      activeFilter,
+      "Status:",
+      order.status,
+      "Match:",
+      activeFilter === "semua" || order.status === activeFilter,
+    );
+
+    return activeFilter === "semua" || order.status === activeFilter;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -110,11 +119,11 @@ export default function KasirDashboard() {
       case "completed":
         return "Selesai";
       case "confirmed":
-        return "Dikonfirmasi";
-      case "cancelled":
-        return "Batal";
+        return "Proses";
       case "pending":
         return "Pending";
+      case "cancelled":
+        return "Batal";
       default:
         return status;
     }
@@ -167,13 +176,13 @@ export default function KasirDashboard() {
       <section className="p-8 bg-[#f6f1ea] min-h-screen">
         {" "}
         <div className="mb-8 flex flex-wrap gap-3">
-          {[
-            { label: "Semua", value: "semua" },
-            { label: "Pending", value: "pending" },
-            { label: "Dikonfirmasi", value: "confirmed" },
-            { label: "Selesai", value: "completed" },
-            { label: "Dibatalkan", value: "cancelled" },
-          ].map((filter) => (
+      {[
+              { label: "Semua", value: "semua" },
+              { label: "Pending", value: "pending" },
+              { label: "Proses", value: "proses" },
+              { label: "Selesai", value: "selesai" },
+              { label: "Dibatalkan", value: "dibatalkan" },
+            ].map((filter) => (
             <button
               key={filter.value}
               onClick={() => setActiveFilter(filter.value)}

@@ -79,5 +79,5 @@ Route::put('/recipes/{productId}', [RecipeController::class, 'update']);
 Route::delete('/recipes/{productId}', [RecipeController::class, 'destroy']);
 
 use App\Http\Controllers\Api\PaymentController;
-Route::post('/payment/create',[PaymentController::class,'create']);
+Route::post('/payment', [PaymentController::class,'create']);
 
