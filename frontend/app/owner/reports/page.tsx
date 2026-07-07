@@ -41,17 +41,16 @@ type Transaction = {
   total_amount: string;
   status: string;
   transaction?: {
-  transaction_id: number;
-  kasir?: {
-    name: string;
-        user_id?: number;
-  } | null;
-  waitres?: {
-    name: string;
+    transaction_id: number;
+    kasir?: {
+      name: string;
+      user_id?: number;
+    } | null;
+    waitres?: {
+      name: string;
+    };
   };
-  
 };
-}
 
 export default function ReportsPage() {
   const router = useRouter();
@@ -110,11 +109,17 @@ export default function ReportsPage() {
     let result = [...transactionData];
 
     if (periode === "hari_ini") {
-      const today = new Date().toISOString().split("T")[0];
+      const today = new Date();
 
-      result = transactionData.filter((trx) =>
-        trx.created_at.startsWith(today),
-      );
+      result = transactionData.filter((trx) => {
+        const date = new Date(trx.created_at);
+
+        return (
+          date.getDate() === today.getDate() &&
+          date.getMonth() === today.getMonth() &&
+          date.getFullYear() === today.getFullYear()
+        );
+      });
     } else if (periode === "bulan_ini") {
       const now = new Date();
 
@@ -186,56 +191,56 @@ export default function ReportsPage() {
 
   //DOWNLOAD EXCEL
   const downloadExcel = () => {
-  const data: any[] = [];
+    const data: any[] = [];
 
-  // RINGKASAN
-  data.push({
-    Keterangan: " RINGKASAN LAPORAN= ",
-  });
-  data.push({
-    Keterangan: "Total Pendapatan",
-    Nilai: totalPendapatan,
-  });
-  data.push({
-    Keterangan: "Total Produk Terjual",
-    Nilai: totalProduk,
-  });
-  data.push({
-    Keterangan: "Produk Terlaris",
-    Nilai: produkTerlaris,
-  });
-  data.push({});
-  data.push({});
-  data.push({
-    Keterangan: " DETAIL TRANSAKSI= ",
-  });
-  transaksiSelesai.forEach((trx) => {
+    // RINGKASAN
     data.push({
-      ID: trx.id,
-      Tanggal: new Date(trx.created_at).toLocaleDateString("id-ID"),
-      Meja: trx.table_id,
-      Kasir: trx.transaction?.kasir?.name || "-",
-      Total: Number(trx.total_amount),
-      Status: trx.status,
+      Keterangan: " RINGKASAN LAPORAN= ",
     });
-
-    // PRODUK DALAM TRANSAKSI
-    trx.items?.forEach((item: any) => {
-      data.push({
-        Produk: item.product?.name || "-",
-        Qty: item.quantity,
-        Harga: Number(item.price),
-        Subtotal: Number(item.price) * item.quantity,
-      });
+    data.push({
+      Keterangan: "Total Pendapatan",
+      Nilai: totalPendapatan,
     });
-
+    data.push({
+      Keterangan: "Total Produk Terjual",
+      Nilai: totalProduk,
+    });
+    data.push({
+      Keterangan: "Produk Terlaris",
+      Nilai: produkTerlaris,
+    });
     data.push({});
-  });
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Laporan");
-  XLSX.writeFile(wb, "Laporan_Bakery.xlsx");
-};
+    data.push({});
+    data.push({
+      Keterangan: " DETAIL TRANSAKSI= ",
+    });
+    transaksiSelesai.forEach((trx) => {
+      data.push({
+        ID: trx.id,
+        Tanggal: new Date(trx.created_at).toLocaleDateString("id-ID"),
+        Meja: trx.table_id,
+        Kasir: trx.transaction?.kasir?.name || "-",
+        Total: Number(trx.total_amount),
+        Status: trx.status,
+      });
+
+      // PRODUK DALAM TRANSAKSI
+      trx.items?.forEach((item: any) => {
+        data.push({
+          Produk: item.product?.name || "-",
+          Qty: item.quantity,
+          Harga: Number(item.price),
+          Subtotal: Number(item.price) * item.quantity,
+        });
+      });
+
+      data.push({});
+    });
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Laporan");
+    XLSX.writeFile(wb, "Laporan_Bakery.xlsx");
+  };
 
   //DOWNLOAD PDF
   const downloadPDF = () => {
@@ -300,7 +305,6 @@ export default function ReportsPage() {
       body: produkRows,
     });
 
- 
     autoTable(doc, {
       startY: (doc as any).lastAutoTable.finalY + 10,
       head: [["No", "Tanggal", "Meja", "Item", "Total", "Status", "Kasir"]],
@@ -607,7 +611,9 @@ export default function ReportsPage() {
                           </span>
                         </td>
 
-                        <td className="px-6 py-4">{trx.transaction?.kasir?.name || "-"}</td>
+                        <td className="px-6 py-4">
+                          {trx.transaction?.kasir?.name || "-"}
+                        </td>
                       </tr>
                     ))}
                 </tbody>

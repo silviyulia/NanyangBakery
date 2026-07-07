@@ -204,7 +204,7 @@ export default function OwnerDashboard() {
               },
               {
                 label: "Total karyawan",
-                value: dashboardData?.total_transactions ?? 0,
+                value: dashboardData?.active_employees ?? 0,
               },
               {
                 label: "Jam Operasional",
@@ -300,7 +300,7 @@ export default function OwnerDashboard() {
             {/* Sales Chart */}
             <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition">
               <h3 className="text-xl font-bold text-amber-950 mb-4">
-                Grafik Penjualan
+                Grafik Pendapatan
               </h3>
               <div className="h-64">
                 {salesData.length > 0 ? (
