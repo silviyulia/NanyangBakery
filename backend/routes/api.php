@@ -44,6 +44,7 @@ Route::get('/transactions', [TransactionController::class, 'index']);
 Route::post('/transactions', [TransactionController::class, 'store']);
 Route::get('/transactions/{id}', [TransactionController::class, 'show']);
 Route::get('/transactions/daily-summary', [TransactionController::class, 'dailySummary']);
+Route::get('/transactions/{id}/download', [TransactionController::class, 'downloadReceipt']);
 
 use App\Http\Controllers\Api\DashboardController;
 Route::get('/dashboard', [DashboardController::class, 'index']);
@@ -79,3 +80,4 @@ Route::delete('/recipes/{productId}', [RecipeController::class, 'destroy']);
 
 use App\Http\Controllers\Api\PaymentController;
 Route::post('/payment/create',[PaymentController::class,'create']);
+
