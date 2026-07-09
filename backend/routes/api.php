@@ -44,6 +44,7 @@ Route::get('/transactions', [TransactionController::class, 'index']);
 Route::post('/transactions', [TransactionController::class, 'store']);
 Route::get('/transactions/{id}', [TransactionController::class, 'show']);
 Route::get('/transactions/daily-summary', [TransactionController::class, 'dailySummary']);
+Route::get('/transactions/{id}/download', [TransactionController::class, 'downloadReceipt']);
 
 use App\Http\Controllers\Api\DashboardController;
 Route::get('/dashboard', [DashboardController::class, 'index']);

@@ -48,15 +48,22 @@ export default function RiwayatPage() {
     });
   };
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("id-ID", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+const formatTime = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
-  return (
+const downloadReceipt = (transactionId: string) => {
+  window.open(
+    `http://127.0.0.1:8000/api/transactions/${transactionId}/download`,
+    "_blank"
+  );
+};
+
+return (
     <Sidebar>
 
       {/* MAIN */}
@@ -160,11 +167,14 @@ export default function RiwayatPage() {
                           </span>
                         </td>
 
-                        <td className="px-6 py-4 text-center">
-                          <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-medium transition">
-                            Unduh
-                          </button>
-                        </td>
+<td className="px-6 py-4 text-center">
+  <button
+    onClick={() => downloadReceipt(item.transaction_id)}
+    className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-medium transition"
+  >
+    Unduh
+  </button>
+</td>
                       </tr>
                     ))
                   ) : !loading ? (

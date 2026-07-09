@@ -10,14 +10,21 @@ use App\Models\Transaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\Receipt;
 
 class TransactionController extends Controller
 {
     // GET /api/transactions
 public function index()
 {
-    $transactions = Transaction::orderBy('created_at', 'desc')
-        ->get();
+    $transactions = Transaction::with([
+        'receipt',
+        'kasir',
+        'order'
+    ])
+    ->orderBy('created_at', 'desc')
+    ->get();
 
     return response()->json($transactions);
 }
@@ -157,10 +164,26 @@ public function index()
         return response()->json($summary);
     }
 
-    private function generateReceiptNumber()
-    {
-        $prefix = 'RCP' . date('YmdHi');
-        $count = Receipt::whereDate('created_at', today())->count() + 1;
-        return $prefix . str_pad($count, 4, '0', STR_PAD_LEFT);
-    }
+private function generateReceiptNumber()
+{
+    $prefix = 'RCP' . date('YmdHi');
+    $count = Receipt::whereDate('created_at', today())->count() + 1;
+
+    return $prefix . str_pad($count, 4, '0', STR_PAD_LEFT);
+}
+
+public function downloadReceipt($id)
+{
+    $transaction = Transaction::with([
+        'receipt',
+        'order.items.product',
+        'kasir'
+    ])->findOrFail($id);
+
+    $pdf = Pdf::loadView('receipt', compact('transaction'));
+
+    return $pdf->download(
+        'Struk-' . ($transaction->receipt->receipt_number ?? $transaction->transaction_id) . '.pdf'
+    );
+}
 }
