@@ -48,123 +48,87 @@ public function index()
     }
 
     // POST /api/transactions
-public function store(Request $request)
-{
-    $validated = $request->validate([
-        'order_id' => 'nullable|exists:orders,id',
-        'kasir_id' => 'required|exists:users,user_id',
-        'session_id' => 'nullable|exists:cashier_sessions,session_id',
-        'total_amount' => 'required|numeric|min:0',
-        'payment_method' => 'required|in:cash,qris,transfer',
-        'amount_paid' => 'required|numeric|min:0',
-        'reference_number' => 'nullable|unique:transactions,reference_number',
-    ]);
-
-    DB::beginTransaction();
-
-    try {
-
-        $order = \App\Models\Order::with('items')->find($validated['order_id']);
-
-        $transaction = Transaction::create([
-            'order_id' => $validated['order_id'],
-            'kasir_id' => $validated['kasir_id'],
-            'session_id' => $validated['session_id'] ?? null,
-            'total_amount' => $validated['total_amount'],
-            'payment_method' => $validated['payment_method'],
-            'payment_status' => 'completed',
-            'amount_paid' => $validated['amount_paid'],
-            'reference_number' => $validated['reference_number'] ?? null,
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'order_id' => 'nullable|exists:orders,id',
+            'kasir_id' => 'required|exists:users,user_id',
+            'session_id' => 'nullable|exists:cashier_sessions,session_id',
+            'total_amount' => 'required|numeric|min:0',
+            'payment_method' => 'required|in:cash,qris,transfer',
+            'payment_status' => 'sometimes|in:pending,completed,failed',
+            'amount_paid' => 'required|numeric|min:0',
+            'reference_number' => 'nullable|unique:transactions,reference_number',
         ]);
 
-        if ($order) {
+        DB::beginTransaction();
 
-            // Kurangi bahan baku MINUMAN
-            foreach ($order->items as $item) {
-\Log::info("ORDER ITEM", [
-    'order_item_product_id' => $item->product_id,
-    'order_item_qty' => $item->quantity,
-]);
+        try {
+            $order = \App\Models\Order::with('items')->find($validated['order_id']);
 
-$product = Product::find($item->product_id);
-
-\Log::info("PRODUCT", [
-    'product_id' => $product?->product_id,
-    'product_name' => $product?->name,
-    'category_id' => $product?->category_id,
-]);
-                if (!$product) {
-                    continue;
-                }
-
-                // hanya kategori minuman
-                if ($product->category_id == 3) {
-
-                    $recipes = Recipe::where(
-                        'product_id',
-                        $product->product_id
-                    )->get();
-
-                    \Log::info([
-    'jumlah_recipe' => $recipes->count(),
-    'recipes' => $recipes->toArray(),
-]);
-
-                    foreach ($recipes as $recipe) {
-
-                        $ingredient = Ingredient::find(
-                            $recipe->ingredient_id
-                        );
-
-                        if (!$ingredient) {
-                            continue;
-                        }
-
-                        $usedQty =
-                            $recipe->quantity * $item->quantity;
-
-\Log::info("SEBELUM UPDATE", [
-    'ingredient' => $ingredient->ingredient_name,
-    'stok_awal' => $ingredient->qty,
-    'dipakai' => $usedQty,
-]);
-
-$ingredient->qty = max(
-    0,
-    $ingredient->qty - $usedQty
-);
-
-$ingredient->save();
-
-$ingredient->refresh();
-
-DB::table('ingredients')
-    ->where('ingredient_id', $recipe->ingredient_id)
-    ->decrement('qty', $usedQty);          }
-                }
-            }
-            $order->update([
-                'status' => 'selesai'
+            $transaction = Transaction::create([
+                'order_id' => $validated['order_id'],
+                'kasir_id' => $validated['kasir_id'],
+                'session_id' => $validated['session_id'] ?? null,
+                'total_amount' => $validated['total_amount'],
+                'payment_method' => $validated['payment_method'],
+                'payment_status' => $validated['payment_status'] ?? 'completed',
+                'amount_paid' => $validated['amount_paid'],
+                'reference_number' => $validated['reference_number'] ?? null,
             ]);
+
+            $isCompleted = ($validated['payment_status'] ?? 'completed') === 'completed';
+
+            if ($order && $isCompleted) {
+                foreach ($order->items as $item) {
+                    $product = Product::find($item->product_id);
+
+                    if (!$product) {
+                        continue;
+                    }
+
+                    // Drink products consume raw ingredients from recipe.
+                    if ($product->category_id == 3) {
+                        $recipes = Recipe::where('product_id', $product->product_id)->get();
+
+                        foreach ($recipes as $recipe) {
+                            $ingredient = Ingredient::find($recipe->ingredient_id);
+
+                            if (!$ingredient) {
+                                continue;
+                            }
+
+                            $usedQty = $recipe->quantity * $item->quantity;
+                            DB::table('ingredients')
+                                ->where('ingredient_id', $recipe->ingredient_id)
+                                ->decrement('qty', $usedQty);
+                        }
+                    }
+
+                    // Cake products do not consume recipe ingredients at payment time.
+                    // Their available stock is derived from production records minus sold quantity.
+                }
+
+                $order->update(['status' => 'selesai']);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Pembayaran berhasil',
+                'transaction' => $transaction,
+                'order' => $order,
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ], 500);
         }
-        DB::commit();
-        return response()->json([
-            'message' => 'Pembayaran berhasil',
-            'transaction' => $transaction,
-            'order' => $order
-        ], 201);
-
-    } catch (\Exception $e) {
-
-    DB::rollBack();
-
-    return response()->json([
-        'message' => $e->getMessage(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine(),
-    ], 500);
-}
-}
+    }
     // GET /api/transactions/{id}
     public function show($id)
     {

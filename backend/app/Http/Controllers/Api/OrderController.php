@@ -20,7 +20,9 @@ public function index()
         'waitres',
         'items.product',
         'transaction.kasir'
-    ])->get();
+    ])
+    ->orderBy('created_at', 'desc')
+    ->get();
 
     return response()->json($orders);
 }

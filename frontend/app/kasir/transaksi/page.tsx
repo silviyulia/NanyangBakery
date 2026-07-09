@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import Script from "next/script";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import MenuCard, { MenuItem } from "@/app/waitres/MenuCard";
+import { User } from "@/app/lib/auth";
 import Sidebar from "../components/Sidebar";
 
 interface Product {
@@ -53,6 +55,7 @@ export default function transaksiPage() {
   const [loading, setLoading] = useState(true);
   const orderId = searchParams.get("order");
   const [order, setOrder] = useState<OrderDetail | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [cart, setCart] = useState<
     Array<{
       id: number;
@@ -67,6 +70,15 @@ export default function transaksiPage() {
     if (typeof window === "undefined") return;
 
     const storedOrder = window.localStorage.getItem("waitresOrder");
+    const storedUser = window.localStorage.getItem("user");
+
+    if (storedUser) {
+      try {
+        setCurrentUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error("Gagal memuat user login:", error);
+      }
+    }
 
     if (!storedOrder) return;
 
@@ -248,143 +260,186 @@ export default function transaksiPage() {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [amountPaid, setAmountPaid] = useState(0);
   //const grandTotal = Math.round(totalPrice * 1.1);
-  const grandTotal = totalPrice
+  const grandTotal = totalPrice;
   const changeAmount =
     paymentMethod === "cash" ? Math.max(0, amountPaid - grandTotal) : 0;
-  const [processing, setProcessing] = useState(false);
-  const handlePayment = async () => {
-  try {
+  const [processing, setProcessing] = useState(true);
+
+  const finalizeTransaction = async (
+    paidAmount: number,
+    paymentStatus: "pending" | "completed" | "failed",
+    referenceNumber?: string,
+  ) => {
     if (!orderId) {
-      alert("Order tidak ditemukan");
-      return;
+      throw new Error("Order tidak ditemukan");
     }
-
-    let paid = amountPaid;
-
-    if (paymentMethod === "qris" || paymentMethod === "transfer") {
-      paid = grandTotal;
-    }
-
-    if (paymentMethod === "cash" && paid < grandTotal) {
-      alert("Uang pembayaran kurang");
-      return;
-    }
-
-
-    // ================= UPDATE ORDER ITEMS =================
 
     const itemRes = await fetch(
       `http://127.0.0.1:8000/api/orders/${orderId}/items`,
       {
         method: "PUT",
-        headers:{
-          "Content-Type":"application/json",
-          Accept:"application/json"
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
-
         body: JSON.stringify({
-          items: cart
-        })
-      }
+          items: cart,
+        }),
+      },
     );
 
-
-    const itemData = await itemRes.json();
-
-    console.log("UPDATE ITEM:", itemData);
-
-
-    if(!itemRes.ok){
-      throw new Error("Gagal update item order");
+    if (!itemRes.ok) {
+      const itemData = await itemRes.text();
+      throw new Error(`Gagal update item order: ${itemData}`);
     }
 
-
-
-    // ================= SIMPAN TRANSAKSI =================
-
-    const trxRes = await fetch(
-      "http://127.0.0.1:8000/api/transactions",
-      {
-        method:"POST",
-
-        headers:{
-          "Content-Type":"application/json",
-          Accept:"application/json"
-        },
-
-        body:JSON.stringify({
-
-          order_id:Number(orderId),
-
-          kasir_id:2,
-
-          total_amount:grandTotal,
-
-          payment_method:paymentMethod,
-
-          amount_paid:paid,
-
-          items:cart
-
-        })
-      }
-    );
-
-const trxData = await trxRes.json();
-
-console.log("STATUS :", trxRes.status);
-console.log("DATA :", trxData);
-
-if (!trxRes.ok) {
-  alert(JSON.stringify(trxData));
-  return;
-}
-
-
-
-    // ================= UPDATE STATUS ORDER =================
-
-
-    const orderRes = await fetch(
-      `http://127.0.0.1:8000/api/orders/${orderId}`,
-      {
-        method:"PUT",
-
-        headers:{
-          "Content-Type":"application/json"
-        },
-
-        body:JSON.stringify({
-
-          status:"selesai"
-
-        })
-      }
-    );
-
-
-    if(!orderRes.ok){
-      throw new Error("Gagal update order");
+    if (!currentUser) {
+      throw new Error("Kasir belum login. Refresh halaman dan coba lagi.");
     }
 
+    const trxRes = await fetch("http://127.0.0.1:8000/api/transactions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        order_id: Number(orderId),
+        kasir_id: currentUser.user_id,
+        total_amount: grandTotal,
+        payment_method: paymentMethod,
+        payment_status: paymentStatus,
+        amount_paid: paidAmount,
+        reference_number: referenceNumber,
+        items: cart,
+      }),
+    });
 
+    if (!trxRes.ok) {
+      const trxData = await trxRes.text();
+      throw new Error(`Gagal menyimpan transaksi: ${trxData}`);
+    }
 
-    alert("Pembayaran berhasil");
+    if (paymentStatus === "completed") {
+      const orderRes = await fetch(
+        `http://127.0.0.1:8000/api/orders/${orderId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status: "selesai",
+          }),
+        },
+      );
 
+      if (!orderRes.ok) {
+        throw new Error("Gagal update order");
+      }
 
-    router.push("/kasir");
+      setShowPaymentModal(false);
+      alert("Pembayaran berhasil dan pesanan otomatis terkonfirmasi.");
+      router.push("/kasir");
+      return;
+    }
 
+    alert(
+      "Transaksi tercatat, pembayaran Midtrans sedang menunggu konfirmasi.",
+    );
+  };
 
-  } catch(error){
+  const handlePayment = async () => {
+    try {
+      if (!orderId) {
+        alert("Order tidak ditemukan");
+        return;
+      }
 
-    console.error(error);
-    alert("Pembayaran gagal");
+      let paid = amountPaid;
 
-  }
-};
+      if (paymentMethod === "qris" || paymentMethod === "transfer") {
+        paid = grandTotal;
+      }
+
+      if (paymentMethod === "cash" && paid < grandTotal) {
+        alert("Uang pembayaran kurang");
+        return;
+      }
+
+      console.log("Payment Method:", paymentMethod);
+
+      if (paymentMethod === "qris" || paymentMethod === "transfer") {
+        const res = await fetch("http://127.0.0.1:8000/api/payment", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            order_id: Number(orderId),
+            payment_method: paymentMethod,
+          }),
+        });
+
+        const data = await res.json();
+        console.log("Midtrans response status:", res.status, data);
+
+        if (!res.ok) {
+          alert(data.message || "Gagal membuat pembayaran Midtrans");
+          return;
+        }
+
+        if (typeof window === "undefined") {
+          alert("Midtrans Snap belum siap. Muat ulang halaman.");
+          return;
+        }
+
+        const snap = (window as any).snap;
+
+        if (!snap) {
+          alert("Midtrans Snap belum tersedia. Muat ulang halaman.");
+          return;
+        }
+
+        snap.pay(data.token, {
+          onSuccess: async (result: any) => {
+            console.log("Midtrans success:", result);
+            const referenceNumber = result.transaction_id || result.order_id;
+            await finalizeTransaction(grandTotal, "completed", referenceNumber);
+          },
+          onPending: async (result: any) => {
+            console.log("Midtrans pending:", result);
+            const referenceNumber = result.transaction_id || result.order_id;
+            await finalizeTransaction(grandTotal, "pending", referenceNumber);
+          },
+          onError: async (result: any) => {
+            console.error("Midtrans error:", result);
+            alert("Terjadi kesalahan pembayaran Midtrans.");
+          },
+          onClose: () => {
+            console.log(
+              "Midtrans popup ditutup tanpa menyelesaikan pembayaran",
+            );
+          },
+        });
+
+        return;
+      }
+
+      await finalizeTransaction(paid, "completed");
+    } catch (error) {
+      console.error(error);
+      alert("Pembayaran gagal");
+    }
+  };
 
   return (
     <>
+      <Script
+        src="https://app.sandbox.midtrans.com/snap/snap.js"
+        data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
+      />
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-3xl w-[450px] p-6 shadow-xl">
@@ -474,7 +529,7 @@ if (!trxRes.ok) {
             {incomingTable && (
               <div className="mb-6">
                 <div className="bg-orange-100 border border-orange-300 p-4 rounded-2xl text-orange-800 font-medium">
-                  Pesanan dari{" "}
+                  Pesanan dari meja{" "}
                   <span className="font-bold">{incomingTable}</span>
                 </div>
               </div>
@@ -602,7 +657,7 @@ if (!trxRes.ok) {
                       <span>Rp {totalPrice.toLocaleString("id-ID")}</span>
                     </div>
 
-                   {/* <div className="flex justify-between">
+                    {/* <div className="flex justify-between">
                       <span>PPN 10%</span>
 
                       <span>
@@ -615,8 +670,7 @@ if (!trxRes.ok) {
                       <span>Total</span>
 
                       <span className="text-orange-600">
-                        Rp{" "}
-                        {totalPrice.toLocaleString("id-ID")}
+                        Rp {totalPrice.toLocaleString("id-ID")}
                       </span>
                     </div>
 
