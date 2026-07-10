@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Jul 01, 2026 at 03:06 PM
+-- Generation Time: Jul 10, 2026 at 02:26 PM
 -- Server version: 8.4.3
 -- PHP Version: 8.3.26
 
@@ -102,14 +102,15 @@ CREATE TABLE `ingredients` (
 --
 
 INSERT INTO `ingredients` (`ingredient_id`, `ingredient_name`, `qty`, `unit`, `status`, `minimum_stock`) VALUES
-(1, 'tepung terigu', 36, 'Kg', 'available', 5),
+(1, 'tepung terigu', 34, 'Kg', 'available', 5),
 (2, 'gula pasir', 32, 'Kg', 'available', 5),
-(3, 'margarin', 5, 'Kg', 'available', 3),
+(3, 'margarin', 4, 'Kg', 'available', 3),
 (4, 'susu cair', 5, 'Liter', 'available', 2),
 (5, 'Espresso', 3, 'Kg', 'available', 1),
 (7, 'Telur', 24, 'Butir', 'available', 10),
 (8, 'bubuk coklat', 2, 'Kg', 'available', 1),
-(9, 'bubuk macha', 3, 'Kg', 'available', 1);
+(9, 'bubuk macha', 3, 'Kg', 'available', 1),
+(11, 'gula halus', 4, 'Kg', 'available', 2);
 
 -- --------------------------------------------------------
 
@@ -214,7 +215,13 @@ INSERT INTO `orders` (`id`, `table_id`, `waitres_id`, `total_amount`, `status`, 
 (8, 4, 1, 34000.00, 'selesai', '2026-06-29 16:08:12', '2026-06-29 16:08:44'),
 (9, 5, 1, 30000.00, 'selesai', '2026-06-29 16:13:26', '2026-06-29 16:13:52'),
 (10, 6, 1, 17000.00, 'selesai', '2026-06-29 16:34:14', '2026-06-29 16:46:14'),
-(11, 3, 1, 20000.00, 'selesai', '2026-06-29 17:16:49', '2026-06-29 17:17:24');
+(11, 3, 1, 20000.00, 'selesai', '2026-06-29 17:16:49', '2026-06-29 17:17:24'),
+(12, 1, 3, 20000.00, 'selesai', '2026-07-07 14:33:13', '2026-07-09 12:54:07'),
+(13, 3, 3, 17000.00, 'selesai', '2026-07-09 13:22:13', '2026-07-09 13:23:59'),
+(14, 4, 3, 64000.00, 'selesai', '2026-07-09 13:26:55', '2026-07-09 13:27:34'),
+(15, 5, 3, 65000.00, 'selesai', '2026-07-09 13:37:05', '2026-07-09 13:38:33'),
+(16, 2, 3, 24000.00, 'pending', '2026-07-10 13:43:00', '2026-07-10 13:43:00'),
+(17, 3, 3, 30000.00, 'selesai', '2026-07-10 13:48:00', '2026-07-10 13:49:59');
 
 -- --------------------------------------------------------
 
@@ -252,7 +259,15 @@ INSERT INTO `order_items` (`id`, `order_id`, `product_id`, `quantity`, `price`, 
 (12, 8, 6, 2, 17000.00, 34000.00, '2026-06-29 16:08:12', '2026-06-29 16:08:12'),
 (13, 9, 3, 1, 30000.00, 30000.00, '2026-06-29 16:13:26', '2026-06-29 16:13:26'),
 (14, 10, 6, 1, 17000.00, 17000.00, '2026-06-29 16:34:14', '2026-06-29 16:34:14'),
-(15, 11, 4, 1, 20000.00, 20000.00, '2026-06-29 17:16:49', '2026-06-29 17:16:49');
+(15, 11, 4, 1, 20000.00, 20000.00, '2026-06-29 17:16:49', '2026-06-29 17:16:49'),
+(16, 12, 4, 1, 20000.00, 20000.00, '2026-07-07 14:33:13', '2026-07-07 14:33:13'),
+(17, 13, 6, 1, 17000.00, 17000.00, '2026-07-09 13:22:13', '2026-07-09 13:22:13'),
+(18, 14, 5, 1, 28000.00, 28000.00, '2026-07-09 13:26:55', '2026-07-09 13:26:55'),
+(19, 14, 9, 1, 36000.00, 36000.00, '2026-07-09 13:26:55', '2026-07-09 13:26:55'),
+(20, 15, 3, 1, 30000.00, 30000.00, '2026-07-09 13:37:05', '2026-07-09 13:37:05'),
+(21, 15, 2, 1, 35000.00, 35000.00, '2026-07-09 13:37:05', '2026-07-09 13:37:05'),
+(22, 16, 7, 1, 24000.00, 24000.00, '2026-07-10 13:43:00', '2026-07-10 13:43:00'),
+(23, 17, 3, 1, 30000.00, 30000.00, '2026-07-10 13:48:00', '2026-07-10 13:48:00');
 
 -- --------------------------------------------------------
 
@@ -288,7 +303,8 @@ INSERT INTO `productions` (`production_id`, `product_id`, `quantity_produced`, `
 (3, 5, 5, '2026-06-15 19:59:25'),
 (4, 9, 4, '2026-06-18 21:20:47'),
 (5, 2, 5, '2026-06-28 22:42:32'),
-(6, 7, 3, '2026-06-29 20:58:09');
+(6, 7, 3, '2026-06-29 20:58:09'),
+(7, 5, 7, '2026-07-10 20:52:35');
 
 -- --------------------------------------------------------
 
@@ -374,7 +390,10 @@ INSERT INTO `recipes` (`recipe_id`, `product_id`, `ingredient_id`, `quantity`) V
 (59, 2, 7, 6.00),
 (60, 2, 4, 0.03),
 (61, 4, 9, 0.05),
-(62, 4, 4, 0.08);
+(62, 4, 4, 0.08),
+(66, 5, 1, 0.30),
+(67, 5, 3, 0.12),
+(68, 5, 4, 0.05);
 
 -- --------------------------------------------------------
 
@@ -479,7 +498,12 @@ INSERT INTO `transactions` (`transaction_id`, `order_id`, `kasir_id`, `session_i
 (8, 8, 2, NULL, 34000.00, 'cash', 'completed', 34000.00, 0.00, NULL, '2026-06-29 16:08:43', '2026-06-29 16:08:43'),
 (9, 9, 2, NULL, 30000.00, 'cash', 'completed', 30000.00, 0.00, NULL, '2026-06-29 16:13:52', '2026-06-29 16:13:52'),
 (10, 10, 2, NULL, 17000.00, 'cash', 'completed', 17000.00, 0.00, NULL, '2026-06-29 16:46:14', '2026-06-29 16:46:14'),
-(11, 11, 2, NULL, 20000.00, 'cash', 'completed', 20000.00, 0.00, NULL, '2026-06-29 17:17:23', '2026-06-29 17:17:23');
+(11, 11, 2, NULL, 20000.00, 'cash', 'completed', 20000.00, 0.00, NULL, '2026-06-29 17:17:23', '2026-06-29 17:17:23'),
+(12, 12, 2, NULL, 20000.00, 'qris', 'completed', 20000.00, 0.00, '9c4e2af4-22ac-47a6-9e7f-daaf423089a2', '2026-07-09 12:54:07', '2026-07-09 12:54:07'),
+(13, 13, 2, NULL, 17000.00, 'qris', 'completed', 17000.00, 0.00, 'bc0fb145-3ff6-4f1b-a58b-adb9b512c996', '2026-07-09 13:23:59', '2026-07-09 13:23:59'),
+(14, 14, 2, NULL, 64000.00, 'cash', 'completed', 65000.00, 1000.00, NULL, '2026-07-09 13:27:34', '2026-07-09 13:27:34'),
+(15, 15, 4, NULL, 65000.00, 'qris', 'completed', 65000.00, 0.00, 'eef695b0-f183-47ea-beca-28f49ead5689', '2026-07-09 13:38:33', '2026-07-09 13:38:33'),
+(16, 17, 4, NULL, 30000.00, 'qris', 'completed', 30000.00, 0.00, 'b280049a-0b36-4f08-af8c-b4b1235cdc98', '2026-07-10 13:49:59', '2026-07-10 13:49:59');
 
 -- --------------------------------------------------------
 
@@ -501,10 +525,10 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`user_id`, `name`, `email`, `password`, `phone`, `role`) VALUES
-(1, 'Owner', 'owner@gmail.com', '$2y$12$n2k8Qel5UrjZvdIJBE6Kb.Ce.wEJ/lVZgcfBb7RNmotj8uWwC8K4O', '081234567890', 'owner'),
+(1, 'Owner', 'owner@gmail.com', '$2y$12$y1Ula3668GR/CmC0BC1dcu6vDWlTbLpUMyRNYTmKqV9i63GzSqhk2', '081234567890', 'owner'),
 (2, 'ro', 'kasir@gmail.com', '$2y$12$7mGsqdGdKdppXT4C83IzB.1TCLWgmkrbU97oYevQURhjAQhxXhw92', '081234567891', 'kasir'),
 (3, 'lula', 'waitres@gmail.com', '$2y$12$33l3mVdlFYgY0Rsr2vRXaesjJj6mPfIyLw/fpPc0GPdBU6Vuw..XK', '081234567892', 'waitres'),
-(4, 'hau', 'kasir2@gmail.com', '$2y$12$zHGQYquLh661ZRM0pOMPAuwH/nhhLzbbXRMPRsMQuoXYVIlcXXqsW', '0882716218673', 'kasir');
+(4, 'hau', 'kasir2@gmail.com', '$2y$12$0Kb3ohTX.J8RWnpapT3/VexOgGOocRPP4AhX/8PRY81jm5HqAXs3S', '0882716218673', 'kasir');
 
 --
 -- Indexes for dumped tables
@@ -670,7 +694,7 @@ ALTER TABLE `failed_jobs`
 -- AUTO_INCREMENT for table `ingredients`
 --
 ALTER TABLE `ingredients`
-  MODIFY `ingredient_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `ingredient_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `jobs`
@@ -688,25 +712,25 @@ ALTER TABLE `migrations`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `productions`
 --
 ALTER TABLE `productions`
-  MODIFY `production_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `production_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `product_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `product_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `receipts`
@@ -718,7 +742,7 @@ ALTER TABLE `receipts`
 -- AUTO_INCREMENT for table `recipes`
 --
 ALTER TABLE `recipes`
-  MODIFY `recipe_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=63;
+  MODIFY `recipe_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=69;
 
 --
 -- AUTO_INCREMENT for table `stok_bahan`
@@ -736,7 +760,7 @@ ALTER TABLE `tables`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `transaction_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `transaction_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `users`

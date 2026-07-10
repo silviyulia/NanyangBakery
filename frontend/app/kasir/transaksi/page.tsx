@@ -339,7 +339,7 @@ export default function transaksiPage() {
       }
 
       setShowPaymentModal(false);
-      alert("Pembayaran berhasil dan pesanan otomatis terkonfirmasi.");
+      alert("Pembayaran berhasil dan pesanan terkonfirmasi.");
       router.push("/kasir");
       return;
     }

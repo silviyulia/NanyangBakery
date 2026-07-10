@@ -13,6 +13,7 @@ import {
   X,
   LogOut,
 } from "lucide-react";
+import Swal from "sweetalert2";
 
 interface Product {
   product_id: number;
@@ -85,43 +86,79 @@ const loadProducts = async () => {
       console.error(err);
     }
   };
+
   const handleSave = async () => {
-    if (!productId || !quantity) {
-      alert("Pilih produk dan masukkan jumlah produksi");
-      return;
-    }
+  if (!productId || !quantity) {
+    Swal.fire({
+      icon: "warning",
+      title: "Data Belum Lengkap",
+      text: "Pilih produk dan masukkan jumlah produksi.",
+    });
+    return;
+  }
 
-    try {
-      const url = editId
-        ? `http://127.0.0.1:8000/api/productions/${editId}`
-        : "http://127.0.0.1:8000/api/productions";
-      const method = editId ? "PUT" : "POST";
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          product_id: Number(productId),
-          quantity_produced: Number(quantity),
-        }),
-      });
+  try {
+    const url = editId
+      ? `http://127.0.0.1:8000/api/productions/${editId}`
+      : "http://127.0.0.1:8000/api/productions";
 
-      const data = await response.json();
+    const method = editId ? "PUT" : "POST";
 
-      if (!response.ok) {
-        throw new Error(data.message);
-      }
+    const response = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        product_id: Number(productId),
+        quantity_produced: Number(quantity),
+      }),
+    });
 
-      alert(data.message);
-      await loadProductions();
-      setProductId("");
-      setQuantity("");
-    } catch (error) {
-      console.error(error);
-      alert("Gagal menyimpan produksi");
-    }
-  };
+    const data = await response.json();
+
+if (!response.ok) {
+  const result = await Swal.fire({
+    icon: "error",
+    title: "Produksi Gagal",
+    html: `
+      <b>${data.message}</b><br><br>
+      Silakan lakukan <b>restok bahan baku</b> terlebih dahulu.
+    `,
+    confirmButtonText: "Ke Halaman Stok",
+    showCancelButton: true,
+    cancelButtonText: "Tutup",
+  });
+
+  if (result.isConfirmed) {
+    router.push("/owner/inventory");
+  }
+
+  return;
+}
+
+    Swal.fire({
+      icon: "success",
+      title: "Berhasil",
+      text: data.message,
+      timer: 2000,
+      showConfirmButton: false,
+    });
+
+    await loadProductions();
+    setProductId("");
+    setQuantity("");
+  } catch (error: any) {
+    console.error(error);
+
+    Swal.fire({
+      icon: "error",
+      title: "Terjadi Kesalahan",
+      text: error.message || "Tidak dapat terhubung ke server.",
+    });
+  }
+};
+
   const handleEdit = (item: any) => {
     setEditId(item.production_id);
     setProductId(String(item.product_id));
