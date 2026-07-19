@@ -54,6 +54,9 @@ export default function transaksiPage() {
   const [categories, setCategories] = useState(["Semua"]);
   const [loading, setLoading] = useState(true);
   const orderId = searchParams.get("order");
+  {/*const [orderType, setOrderType] = useState<
+  "waitres" | "manual-dinein" | "takeaway"
+>("waitres"); */}
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [cart, setCart] = useState<
@@ -534,7 +537,12 @@ export default function transaksiPage() {
                 </div>
               </div>
             )}
-
+{/*<button
+  onClick={startManualOrder}
+  className="bg-orange-500 text-white px-4 py-2 rounded-xl"
+>
+  + Transaksi Baru
+</button> */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               {/* LEFT - MENU */}
               <div className="xl:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-gray-200">
