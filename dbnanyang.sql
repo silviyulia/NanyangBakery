@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Jul 10, 2026 at 02:26 PM
+-- Generation Time: Jul 19, 2026 at 04:03 PM
 -- Server version: 8.4.3
 -- PHP Version: 8.3.26
 
@@ -91,7 +91,7 @@ CREATE TABLE `failed_jobs` (
 CREATE TABLE `ingredients` (
   `ingredient_id` bigint UNSIGNED NOT NULL,
   `ingredient_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `qty` decimal(12,0) NOT NULL DEFAULT '0',
+  `qty` decimal(12,2) NOT NULL DEFAULT '0.00',
   `unit` enum('Kg','Gram','Butir','Ml','Liter') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `status` enum('available','empty') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'available',
   `minimum_stock` decimal(12,0) DEFAULT '0'
@@ -102,15 +102,15 @@ CREATE TABLE `ingredients` (
 --
 
 INSERT INTO `ingredients` (`ingredient_id`, `ingredient_name`, `qty`, `unit`, `status`, `minimum_stock`) VALUES
-(1, 'tepung terigu', 34, 'Kg', 'available', 5),
-(2, 'gula pasir', 32, 'Kg', 'available', 5),
-(3, 'margarin', 4, 'Kg', 'available', 3),
-(4, 'susu cair', 5, 'Liter', 'available', 2),
-(5, 'Espresso', 3, 'Kg', 'available', 1),
-(7, 'Telur', 24, 'Butir', 'available', 10),
-(8, 'bubuk coklat', 2, 'Kg', 'available', 1),
-(9, 'bubuk macha', 3, 'Kg', 'available', 1),
-(11, 'gula halus', 4, 'Kg', 'available', 2);
+(1, 'tepung terigu', 27.00, 'Kg', 'available', 5),
+(2, 'gula pasir', 28.45, 'Kg', 'available', 5),
+(3, 'margarin', 2.40, 'Kg', 'available', 3),
+(4, 'susu cair', 2.52, 'Liter', 'available', 2),
+(5, 'Espresso', 2.56, 'Kg', 'available', 1),
+(7, 'Telur', 2.00, 'Butir', 'available', 10),
+(8, 'bubuk coklat', 1.85, 'Kg', 'available', 1),
+(9, 'bubuk macha', 2.25, 'Kg', 'available', 1),
+(11, 'gula halus', 4.00, 'Kg', 'available', 2);
 
 -- --------------------------------------------------------
 
@@ -200,29 +200,6 @@ CREATE TABLE `orders` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `orders`
---
-
-INSERT INTO `orders` (`id`, `table_id`, `waitres_id`, `total_amount`, `status`, `created_at`, `updated_at`) VALUES
-(1, 1, 3, 28000.00, 'selesai', '2026-06-21 14:35:45', '2026-06-21 15:01:37'),
-(2, 2, 3, 60000.00, 'selesai', '2026-06-21 14:37:35', '2026-06-21 15:02:13'),
-(3, 3, 3, 66000.00, 'selesai', '2026-06-21 14:38:09', '2026-06-21 15:02:44'),
-(4, 1, 3, 58000.00, 'selesai', '2026-06-21 15:21:35', '2026-06-21 15:22:14'),
-(5, 1, 3, 50000.00, 'selesai', '2026-06-28 16:18:08', '2026-06-29 13:51:42'),
-(6, 2, 3, 65000.00, 'selesai', '2026-06-29 13:54:15', '2026-06-29 13:55:34'),
-(7, 1, 3, 17000.00, 'selesai', '2026-06-29 16:03:49', '2026-06-29 16:06:41'),
-(8, 4, 1, 34000.00, 'selesai', '2026-06-29 16:08:12', '2026-06-29 16:08:44'),
-(9, 5, 1, 30000.00, 'selesai', '2026-06-29 16:13:26', '2026-06-29 16:13:52'),
-(10, 6, 1, 17000.00, 'selesai', '2026-06-29 16:34:14', '2026-06-29 16:46:14'),
-(11, 3, 1, 20000.00, 'selesai', '2026-06-29 17:16:49', '2026-06-29 17:17:24'),
-(12, 1, 3, 20000.00, 'selesai', '2026-07-07 14:33:13', '2026-07-09 12:54:07'),
-(13, 3, 3, 17000.00, 'selesai', '2026-07-09 13:22:13', '2026-07-09 13:23:59'),
-(14, 4, 3, 64000.00, 'selesai', '2026-07-09 13:26:55', '2026-07-09 13:27:34'),
-(15, 5, 3, 65000.00, 'selesai', '2026-07-09 13:37:05', '2026-07-09 13:38:33'),
-(16, 2, 3, 24000.00, 'pending', '2026-07-10 13:43:00', '2026-07-10 13:43:00'),
-(17, 3, 3, 30000.00, 'selesai', '2026-07-10 13:48:00', '2026-07-10 13:49:59');
-
 -- --------------------------------------------------------
 
 --
@@ -239,35 +216,6 @@ CREATE TABLE `order_items` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `order_items`
---
-
-INSERT INTO `order_items` (`id`, `order_id`, `product_id`, `quantity`, `price`, `subtotal`, `created_at`, `updated_at`) VALUES
-(1, 1, 5, 1, 28000.00, 28000.00, '2026-06-21 14:35:45', '2026-06-21 14:35:45'),
-(2, 2, 3, 2, 30000.00, 60000.00, '2026-06-21 14:37:35', '2026-06-21 14:37:35'),
-(3, 3, 9, 1, 36000.00, 36000.00, '2026-06-21 14:38:09', '2026-06-21 14:38:09'),
-(4, 3, 3, 1, 30000.00, 30000.00, '2026-06-21 14:38:09', '2026-06-21 14:38:09'),
-(5, 4, 3, 1, 30000.00, 30000.00, '2026-06-21 15:21:35', '2026-06-21 15:21:35'),
-(6, 4, 5, 1, 28000.00, 28000.00, '2026-06-21 15:22:13', '2026-06-21 15:22:13'),
-(7, 5, 3, 1, 30000.00, 30000.00, '2026-06-28 16:18:08', '2026-06-28 16:18:08'),
-(8, 5, 4, 1, 20000.00, 20000.00, '2026-06-28 16:18:08', '2026-06-28 16:18:08'),
-(9, 6, 3, 1, 30000.00, 30000.00, '2026-06-29 13:54:16', '2026-06-29 13:54:16'),
-(10, 6, 2, 1, 35000.00, 35000.00, '2026-06-29 13:54:16', '2026-06-29 13:54:16'),
-(11, 7, 6, 1, 17000.00, 17000.00, '2026-06-29 16:03:49', '2026-06-29 16:03:49'),
-(12, 8, 6, 2, 17000.00, 34000.00, '2026-06-29 16:08:12', '2026-06-29 16:08:12'),
-(13, 9, 3, 1, 30000.00, 30000.00, '2026-06-29 16:13:26', '2026-06-29 16:13:26'),
-(14, 10, 6, 1, 17000.00, 17000.00, '2026-06-29 16:34:14', '2026-06-29 16:34:14'),
-(15, 11, 4, 1, 20000.00, 20000.00, '2026-06-29 17:16:49', '2026-06-29 17:16:49'),
-(16, 12, 4, 1, 20000.00, 20000.00, '2026-07-07 14:33:13', '2026-07-07 14:33:13'),
-(17, 13, 6, 1, 17000.00, 17000.00, '2026-07-09 13:22:13', '2026-07-09 13:22:13'),
-(18, 14, 5, 1, 28000.00, 28000.00, '2026-07-09 13:26:55', '2026-07-09 13:26:55'),
-(19, 14, 9, 1, 36000.00, 36000.00, '2026-07-09 13:26:55', '2026-07-09 13:26:55'),
-(20, 15, 3, 1, 30000.00, 30000.00, '2026-07-09 13:37:05', '2026-07-09 13:37:05'),
-(21, 15, 2, 1, 35000.00, 35000.00, '2026-07-09 13:37:05', '2026-07-09 13:37:05'),
-(22, 16, 7, 1, 24000.00, 24000.00, '2026-07-10 13:43:00', '2026-07-10 13:43:00'),
-(23, 17, 3, 1, 30000.00, 30000.00, '2026-07-10 13:48:00', '2026-07-10 13:48:00');
 
 -- --------------------------------------------------------
 
@@ -294,18 +242,6 @@ CREATE TABLE `productions` (
   `production_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `productions`
---
-
-INSERT INTO `productions` (`production_id`, `product_id`, `quantity_produced`, `production_date`) VALUES
-(1, 3, 20, '2026-06-15 12:51:22'),
-(3, 5, 5, '2026-06-15 19:59:25'),
-(4, 9, 4, '2026-06-18 21:20:47'),
-(5, 2, 5, '2026-06-28 22:42:32'),
-(6, 7, 3, '2026-06-29 20:58:09'),
-(7, 5, 7, '2026-07-10 20:52:35');
-
 -- --------------------------------------------------------
 
 --
@@ -328,12 +264,12 @@ CREATE TABLE `products` (
 --
 
 INSERT INTO `products` (`product_id`, `category_id`, `name`, `price`, `status`, `image`, `created_at`, `updated_at`) VALUES
-(2, 2, 'chocolate cake', 35000.00, 'active', 'products/Q4C6inQ2ztig2In2vwsbTWwfEZVk1lDfT8XkICwp.jpg', NULL, NULL),
+(2, 2, 'chocolate cake', 30000.00, 'active', 'products/Q4C6inQ2ztig2In2vwsbTWwfEZVk1lDfT8XkICwp.jpg', NULL, NULL),
 (3, 1, 'croissant', 30000.00, 'active', 'products/SvcJZqby4GeLeb02bcwkMXRHlFVmrxT1Iq7GypPU.jpg', NULL, NULL),
 (4, 3, 'matcha latte', 20000.00, 'active', 'products/XULt8N9FyqOZlMbXTbuexmJsRdj3p67ztWlq3Hz6.png', NULL, NULL),
 (5, 1, 'Baguette', 28000.00, 'active', 'products/ixEwtqYmmRYuHG0OFBQsvA2xyMv3o54ACdgA0i8h.jpg', NULL, NULL),
 (6, 3, 'cappucino', 17000.00, 'active', 'products/gqTW7CjcnYmoFmvMtfQRVOvMMgrjpMxLdCQnnMum.jpg', NULL, NULL),
-(7, 1, 'cookies', 24000.00, 'inactive', 'products/yNHJcnG7FnwcTihoR1qABPkjXV2zTYL8NET0z3I7.jpg', NULL, NULL),
+(7, 1, 'cookies', 24000.00, 'active', 'products/yNHJcnG7FnwcTihoR1qABPkjXV2zTYL8NET0z3I7.jpg', NULL, NULL),
 (9, 2, 'red velvet cake', 36000.00, 'active', 'products/FOHwYtwzZ3GAdN5o1WzKLBIAscmZnrsil3Xgohaj.webp', NULL, NULL);
 
 -- --------------------------------------------------------
@@ -377,23 +313,33 @@ CREATE TABLE `recipes` (
 --
 
 INSERT INTO `recipes` (`recipe_id`, `product_id`, `ingredient_id`, `quantity`) VALUES
-(40, 6, 4, 0.08),
-(41, 6, 5, 0.04),
-(45, 7, 3, 0.20),
-(46, 7, 7, 2.00),
-(47, 7, 1, 0.25),
-(48, 7, 2, 0.16),
-(55, 2, 1, 0.25),
-(56, 2, 2, 0.15),
-(57, 2, 3, 0.20),
-(58, 2, 8, 0.03),
-(59, 2, 7, 6.00),
-(60, 2, 4, 0.03),
-(61, 4, 9, 0.05),
-(62, 4, 4, 0.08),
-(66, 5, 1, 0.30),
-(67, 5, 3, 0.12),
-(68, 5, 4, 0.05);
+(1, 2, 1, 0.25),
+(2, 2, 7, 4.00),
+(3, 2, 3, 0.20),
+(4, 2, 8, 0.03),
+(5, 2, 2, 0.15),
+(6, 2, 4, 0.03),
+(7, 3, 1, 0.15),
+(8, 3, 3, 0.12),
+(9, 3, 11, 0.05),
+(10, 3, 7, 3.00),
+(11, 3, 4, 0.04),
+(12, 5, 1, 0.30),
+(13, 5, 3, 0.15),
+(14, 5, 2, 0.06),
+(15, 4, 9, 0.05),
+(16, 4, 4, 0.08),
+(17, 6, 5, 0.04),
+(18, 6, 4, 0.08),
+(19, 7, 1, 0.25),
+(20, 7, 3, 0.20),
+(21, 7, 7, 2.00),
+(22, 7, 2, 0.16),
+(23, 9, 1, 0.25),
+(24, 9, 3, 0.20),
+(25, 9, 7, 3.00),
+(26, 9, 4, 0.03),
+(27, 9, 2, 0.08);
 
 -- --------------------------------------------------------
 
@@ -415,8 +361,8 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('A43VzoklBDfSBgF9RI0KdtmxMtjhjEBSq4yM2mEC', NULL, '127.0.0.1', 'PostmanRuntime/7.54.0', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoid2RIYWFQSExFempkQTY4QlFhekM3cWhRVDJCQlBRdHo1a0VscDVWayI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MjE6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMCI7czo1OiJyb3V0ZSI7Tjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1781285608),
-('GXYqusOppZlYLaZQd5aU1uVYysrXfcDqSP6A1geN', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36 Edg/149.0.0.0', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoid3Z5SUZIbHRuVWVwMEhRSHBabDlMUms5Z2pIMVJXNG1yNm1vRWpGbSI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MjE6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMCI7czo1OiJyb3V0ZSI7Tjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1781021869);
+('g4U2W2JAv3PVWhapemRQrgDFsJyzn8Njp6YCLr1p', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.128.0 Chrome/148.0.7778.271 Electron/42.5.0 Safari/537.36', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiZTRpdTBXelVUSHE1TnNqcTZ6TXF1cVBkZmo0YmRvR2tlblNzeE9HQSI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MjE6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMCI7czo1OiJyb3V0ZSI7Tjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1783855814),
+('G9eaqzYqFyH4lZ09p28lLvLpTqpKnvL9qPGjyRcz', NULL, '127.0.0.1', 'PostmanRuntime/7.54.0', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoibW5zUVBNNFF3ZU8wRDE4dmp1eHlBeVR2bldCcHNlU0Rkd3c4ejZxZiI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MjE6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMCI7czo1OiJyb3V0ZSI7Tjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1783856763);
 
 -- --------------------------------------------------------
 
@@ -482,28 +428,6 @@ CREATE TABLE `transactions` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `transactions`
---
-
-INSERT INTO `transactions` (`transaction_id`, `order_id`, `kasir_id`, `session_id`, `total_amount`, `payment_method`, `payment_status`, `amount_paid`, `change_amount`, `reference_number`, `created_at`, `updated_at`) VALUES
-(1, 1, 2, NULL, 30800.00, 'cash', 'completed', 31000.00, 200.00, NULL, '2026-06-21 15:01:37', '2026-06-21 15:01:37'),
-(2, 2, 2, NULL, 66000.00, 'cash', 'completed', 67000.00, 1000.00, NULL, '2026-06-21 15:02:13', '2026-06-21 15:02:13'),
-(3, 3, 2, NULL, 103400.00, 'cash', 'completed', 105000.00, 1600.00, NULL, '2026-06-21 15:02:44', '2026-06-21 15:02:44'),
-(4, 4, 2, NULL, 63800.00, 'cash', 'completed', 64000.00, 200.00, NULL, '2026-06-21 15:22:14', '2026-06-21 15:22:14'),
-(5, 5, 2, NULL, 55000.00, 'cash', 'completed', 55000.00, 0.00, NULL, '2026-06-29 13:51:42', '2026-06-29 13:51:42'),
-(6, 6, 2, NULL, 71500.00, 'cash', 'completed', 71500.00, 0.00, NULL, '2026-06-29 13:55:34', '2026-06-29 13:55:34'),
-(7, 7, 2, NULL, 17000.00, 'cash', 'completed', 20000.00, 3000.00, NULL, '2026-06-29 16:06:41', '2026-06-29 16:06:41'),
-(8, 8, 2, NULL, 34000.00, 'cash', 'completed', 34000.00, 0.00, NULL, '2026-06-29 16:08:43', '2026-06-29 16:08:43'),
-(9, 9, 2, NULL, 30000.00, 'cash', 'completed', 30000.00, 0.00, NULL, '2026-06-29 16:13:52', '2026-06-29 16:13:52'),
-(10, 10, 2, NULL, 17000.00, 'cash', 'completed', 17000.00, 0.00, NULL, '2026-06-29 16:46:14', '2026-06-29 16:46:14'),
-(11, 11, 2, NULL, 20000.00, 'cash', 'completed', 20000.00, 0.00, NULL, '2026-06-29 17:17:23', '2026-06-29 17:17:23'),
-(12, 12, 2, NULL, 20000.00, 'qris', 'completed', 20000.00, 0.00, '9c4e2af4-22ac-47a6-9e7f-daaf423089a2', '2026-07-09 12:54:07', '2026-07-09 12:54:07'),
-(13, 13, 2, NULL, 17000.00, 'qris', 'completed', 17000.00, 0.00, 'bc0fb145-3ff6-4f1b-a58b-adb9b512c996', '2026-07-09 13:23:59', '2026-07-09 13:23:59'),
-(14, 14, 2, NULL, 64000.00, 'cash', 'completed', 65000.00, 1000.00, NULL, '2026-07-09 13:27:34', '2026-07-09 13:27:34'),
-(15, 15, 4, NULL, 65000.00, 'qris', 'completed', 65000.00, 0.00, 'eef695b0-f183-47ea-beca-28f49ead5689', '2026-07-09 13:38:33', '2026-07-09 13:38:33'),
-(16, 17, 4, NULL, 30000.00, 'qris', 'completed', 30000.00, 0.00, 'b280049a-0b36-4f08-af8c-b4b1235cdc98', '2026-07-10 13:49:59', '2026-07-10 13:49:59');
 
 -- --------------------------------------------------------
 
@@ -712,19 +636,19 @@ ALTER TABLE `migrations`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `productions`
 --
 ALTER TABLE `productions`
-  MODIFY `production_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `production_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `products`
@@ -742,7 +666,7 @@ ALTER TABLE `receipts`
 -- AUTO_INCREMENT for table `recipes`
 --
 ALTER TABLE `recipes`
-  MODIFY `recipe_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=69;
+  MODIFY `recipe_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `stok_bahan`
@@ -760,7 +684,7 @@ ALTER TABLE `tables`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `transaction_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `transaction_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `users`
