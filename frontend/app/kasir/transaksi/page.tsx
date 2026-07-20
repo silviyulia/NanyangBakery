@@ -235,28 +235,40 @@ export default function transaksiPage() {
     }
   };
 
-  const handleSaveOrder = () => {
-    if (!incomingTable) {
-      if (typeof window !== "undefined") {
-        window.alert("Meja tidak ditemukan.");
-      }
+const handleSaveOrder = async () => {
+  try {
+    if (!orderId) {
+      alert("Order tidak ditemukan");
       return;
     }
 
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(
-        "savedOrder",
-        JSON.stringify({
-          table: incomingTable,
+    const res = await fetch(
+      `http://127.0.0.1:8000/api/orders/${orderId}/items`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
           items: cart,
-          total: totalPrice,
         }),
-      );
-      window.alert("Pesanan telah disimpan");
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err);
     }
 
+    alert("Pesanan berhasil disimpan");
+
     router.push("/kasir");
-  };
+  } catch (error) {
+    console.error(error);
+    alert("Gagal menyimpan perubahan");
+  }
+};
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
