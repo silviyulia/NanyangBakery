@@ -236,6 +236,17 @@ MIDTRANS_IS_PRODUCTION=false
 - Order Menu
 
 ---
+## 🔗 Documentation
+
+| Resource | Link |
+|----------|------|
+| 📄 Final Report |(https://1drv.ms/w/c/596f9527719e2f15/IQDc6rKpF4zzQ7IFtqJTbSx8AdSG6Y2f8cQX_F9f8SUfuGU)  |
+| 📘 User Manual |https://docs.google.com/document/d/1taZYAUBKCGRneVUqyTHA1i8stlyk2ujO/edit?usp=drive_link&ouid=107876852519547808070&rtpof=true&sd=true |
+| 📊 Presentation Slides | https://drive.google.com/file/d/1F7MEpVeDTLbwf9tQiFWLmypzPFiH9pI6/view?usp=drive_link |
+| 🎥 Demo Video | https://youtu.be/p4hiWky7lfk?si=K6BIXvUZTC12m5KG |
+| 🖼️ Project Poster | https://drive.google.com/file/d/1n2rJOsc0sZlKQ6gwbr065liCFuv4j6ha/view?usp=drive_link |
+
+---
 
 ## 👥 Development Team
 
