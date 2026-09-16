@@ -15,6 +15,19 @@ interface Product {
 
 export default function RecipesPage() {
   const router = useRouter();
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      router.push("/login");
+      return null;
+    }
+
+    return {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  };
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const menuItems = [
@@ -36,16 +49,61 @@ export default function RecipesPage() {
   const [selectedProduct, setSelectedProduct] = useState("");
 
   const loadProducts = async () => {
-    const res = await fetch("http://127.0.0.1:8000/api/products");
-    const data = await res.json();
-    setProducts(data);
+    try {
+      const headers = getAuthHeaders();
+
+      if (!headers) return;
+
+      const res = await fetch("http://127.0.0.1:8000/api/products", {
+        method: "GET",
+        headers,
+      });
+
+      const text = await res.text();
+
+      console.log("PRODUCTS STATUS:", res.status);
+      console.log("PRODUCTS RESPONSE:", text);
+
+      if (!res.ok) {
+        throw new Error("Gagal mengambil data produk");
+      }
+
+      const data = JSON.parse(text);
+
+      setProducts(data);
+    } catch (error) {
+      console.error("Load Product Error:", error);
+    }
   };
 
   const loadIngredients = async () => {
-    const res = await fetch("http://127.0.0.1:8000/api/inventory");
-    const data = await res.json();
-    setIngredientsMaster(data);
-    console.log("INGREDIENTS:", ingredientsMaster);
+    try {
+      const headers = getAuthHeaders();
+
+      if (!headers) return;
+
+      const res = await fetch("http://127.0.0.1:8000/api/inventory", {
+        method: "GET",
+        headers,
+      });
+
+      const text = await res.text();
+
+      console.log("INVENTORY STATUS:", res.status);
+      console.log("INVENTORY RESPONSE:", text);
+
+      if (!res.ok) {
+        throw new Error("Gagal mengambil data inventory");
+      }
+
+      const data = JSON.parse(text);
+
+      setIngredientsMaster(data);
+
+      console.log("INGREDIENTS:", data);
+    } catch (error) {
+      console.error("Load Ingredients Error:", error);
+    }
   };
 
   useEffect(() => {
@@ -56,15 +114,31 @@ export default function RecipesPage() {
 
   const loadRecipes = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/recipes");
+      const headers = getAuthHeaders();
 
-      const data = await res.json();
+      if (!headers) return;
+
+      const res = await fetch("http://127.0.0.1:8000/api/recipes", {
+        method: "GET",
+        headers,
+      });
+
+      const text = await res.text();
+
+      console.log("RECIPES STATUS:", res.status);
+      console.log("RECIPES RESPONSE:", text);
+
+      if (!res.ok) {
+        throw new Error("Gagal mengambil data resep");
+      }
+
+      const data = JSON.parse(text);
 
       console.log("RECIPES", data);
 
       setRecipes(data);
     } catch (err) {
-      console.error(err);
+      console.error("Load Recipes Error:", err);
     }
   };
 
@@ -126,6 +200,10 @@ export default function RecipesPage() {
     }
 
     try {
+      const headers = getAuthHeaders();
+
+      if (!headers) return;
+
       const validIngredients = ingredients.filter(
         (item) =>
           item.ingredient_id && item.quantity && Number(item.quantity) > 0,
@@ -138,6 +216,7 @@ export default function RecipesPage() {
         url = `http://127.0.0.1:8000/api/recipes/${editRecipeId}`;
         method = "PUT";
       }
+
       console.log({
         url,
         method,
@@ -145,11 +224,12 @@ export default function RecipesPage() {
         selectedProduct,
         ingredients,
       });
+
       const res = await fetch(url, {
         method,
         headers: {
+          ...headers,
           "Content-Type": "application/json",
-          Accept: "application/json",
         },
         body: JSON.stringify({
           product_id: Number(selectedProduct),
@@ -160,10 +240,21 @@ export default function RecipesPage() {
         }),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+
+      console.log("SAVE RECIPE STATUS:", res.status);
+      console.log("SAVE RECIPE RESPONSE:", text);
+
+      let data;
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = {};
+      }
 
       if (!res.ok) {
-        alert(JSON.stringify(data));
+        alert(data.message || "Gagal menyimpan resep");
         return;
       }
 
@@ -175,7 +266,7 @@ export default function RecipesPage() {
       setEditRecipeId(null);
       setShowModal(false);
 
-      loadRecipes();
+      await loadRecipes();
     } catch (error) {
       console.error(error);
       alert("Gagal menyimpan resep");
@@ -190,23 +281,39 @@ export default function RecipesPage() {
     if (!confirmDelete) return;
 
     try {
+      const headers = getAuthHeaders();
+
+      if (!headers) return;
+
       const res = await fetch(
         `http://127.0.0.1:8000/api/recipes/${productId}`,
         {
           method: "DELETE",
+          headers,
         },
       );
 
-      const data = await res.json();
+      const text = await res.text();
+
+      console.log("DELETE RECIPE STATUS:", res.status);
+      console.log("DELETE RECIPE RESPONSE:", text);
+
+      let data;
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = {};
+      }
 
       if (!res.ok) {
-        alert(data.message);
+        alert(data.message || "Gagal menghapus resep");
         return;
       }
 
-      alert(data.message);
+      alert(data.message || "Resep berhasil dihapus");
 
-      loadRecipes();
+      await loadRecipes();
     } catch (error) {
       console.error(error);
       alert("Gagal menghapus resep.");
@@ -223,22 +330,46 @@ export default function RecipesPage() {
     return true;
   });
 
- const [inventory, setInventory] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/inventory")
-      .then((res) => res.json())
-      .then((data) => setInventory(data))
-      .catch(console.error);
+    const loadInventory = async () => {
+      try {
+        const headers = getAuthHeaders();
+
+        if (!headers) return;
+
+        const res = await fetch("http://127.0.0.1:8000/api/inventory", {
+          method: "GET",
+          headers,
+        });
+
+        const text = await res.text();
+
+        console.log("INVENTORY STATUS:", res.status);
+        console.log("INVENTORY RESPONSE:", text);
+
+        if (!res.ok) {
+          throw new Error(`Gagal mengambil inventory: ${res.status}`);
+        }
+
+        const data = JSON.parse(text);
+
+        setInventory(data);
+      } catch (error) {
+        console.error("Error loadInventory:", error);
+      }
+    };
+
+    loadInventory();
   }, []);
 
   const lowStockItems = inventory.filter(
     (item) => Number(item.qty) <= Number(item.minimum_stock),
   );
 
-
   return (
-     <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
       <aside
         className={`${
@@ -276,7 +407,11 @@ export default function RecipesPage() {
 
         <div className="p-4 border-t border-amber-700">
           <button
-            onClick={() => router.push("/login")}
+            onClick={() => {
+              localStorage.removeItem("user");
+              localStorage.removeItem("token");
+              router.push("/login");
+            }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-600 transition text-white"
           >
             <LogOut size={20} />
@@ -309,12 +444,11 @@ export default function RecipesPage() {
           </div>
         </header>
 
-
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto p-8 space-y-6 bg-[#f6efe9]">
           {/* HEADER */}
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Resep Produk</h2>
+            <h2 className="text-3xl font-bold text-amber-950">Resep Produk</h2>
 
             <button
               onClick={() => setShowModal(true)}
@@ -487,7 +621,9 @@ export default function RecipesPage() {
               >
                 <div className="flex justify-between items-center p-4 bg-orange-100">
                   <div>
-                    <h3 className="font-bold text-lg">{item.product_name}</h3>
+                    <h3 className="font-bold text-lg text-gray-900">
+                      {item.product_name}
+                    </h3>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -507,17 +643,20 @@ export default function RecipesPage() {
                 </div>
 
                 <div className="p-4">
-                  <p className="text-sm mb-3 font-medium">Komposisi bahan:</p>
-
+                  <p className="text-sm mb-3 font-medium text-gray-900">
+                    Komposisi bahan:
+                  </p>
                   <div className="space-y-2">
                     {item.bahan.map((b: any, idx: number) => (
                       <div
                         key={idx}
                         className="flex justify-between bg-gray-100 px-3 py-2 rounded"
                       >
-                        <span>{b.ingredient_name}</span>
+                        <span className="text-gray-900">
+                          {b.ingredient_name}
+                        </span>
 
-                        <span>
+                        <span className="text-gray-900 font-medium">
                           {b.quantity} {b.unit}
                         </span>
                       </div>

@@ -6,38 +6,43 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use App\Http\Middleware\RoleMiddleware;
 
 class AuthController extends Controller
 {
-    public function login(Request $request)
-    {
-        $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required|string',
-        ]);
+public function login(Request $request)
+{
+    $request->validate([
+        'email'    => 'required|email',
+        'password' => 'required|string',
+    ]);
 
-        $user = DB::table('users')
-                  ->where('email', $request->email)
-                  ->first();
+    $user = \App\Models\User::where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'message' => 'Email atau password salah.'
-            ], 401);
-        }
-
+    if (!$user || !Hash::check($request->password, $user->password)) {
         return response()->json([
-            'message' => 'Login berhasil.',
-            'user' => [
-                'user_id' => $user->user_id,
-                'name'    => $user->name,
-                'email'   => $user->email,
-                'phone'   => $user->phone,
-                'role'    => $user->role,
-            ]
-        ], 200);
+            'message' => 'Email atau password salah.'
+        ], 401);
     }
 
+    // Hapus token lama jika ingin satu sesi login per user
+    $user->tokens()->delete();
+
+    // Buat token Sanctum
+    $token = $user->createToken('auth_token')->plainTextToken;
+
+    return response()->json([
+        'message' => 'Login berhasil.',
+        'token'   => $token,
+        'user' => [
+            'user_id' => $user->user_id,
+            'name'    => $user->name,
+            'email'   => $user->email,
+            'phone'   => $user->phone,
+            'role'    => $user->role,
+        ]
+    ], 200);
+}
     public function register(Request $request)
 {
     $request->validate([
@@ -60,6 +65,15 @@ class AuthController extends Controller
         'message' => 'User berhasil ditambahkan.',
         'user_id' => $user,
     ], 201);
+}
+
+public function logout(Request $request)
+{
+    $request->user()->currentAccessToken()->delete();
+
+    return response()->json([
+        'message' => 'Logout berhasil.'
+    ]);
 }
 
 public function index()

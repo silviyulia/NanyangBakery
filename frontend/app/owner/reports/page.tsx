@@ -42,6 +42,7 @@ type Transaction = {
   status: string;
   transaction?: {
     transaction_id: number;
+    payment_method?: string;
     kasir?: {
       name: string;
       user_id?: number;
@@ -54,7 +55,19 @@ type Transaction = {
 
 export default function ReportsPage() {
   const router = useRouter();
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
 
+    if (!token) {
+      router.push("/login");
+      return null;
+    }
+
+    return {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  };
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // DATA LAPORAN
@@ -85,24 +98,69 @@ export default function ReportsPage() {
 
   // AMBIL DATA TRANSAKSI
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/orders")
-      .then((res) => res.json())
-      .then((data) => {
+    const loadTransactions = async () => {
+      try {
+        const headers = getAuthHeaders();
+
+        if (!headers) return;
+
+        const res = await fetch("http://127.0.0.1:8000/api/orders", {
+          method: "GET",
+          headers,
+        });
+
+        const text = await res.text();
+
+        console.log("ORDERS STATUS:", res.status);
+        console.log("ORDERS RESPONSE:", text);
+
+        if (!res.ok) {
+          throw new Error("Gagal mengambil data transaksi");
+        }
+
+        const data = JSON.parse(text);
+
         setTransactionData(data);
-      })
-      .catch((err) => console.error(err));
+      } catch (err) {
+        console.error("Load Transactions Error:", err);
+      }
+    };
+    loadTransactions();
   }, []);
 
   //Produk terlaris
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/reports/summary")
-      .then((res) => res.json())
-      .then((data) => {
+    const loadReportSummary = async () => {
+      try {
+        const headers = getAuthHeaders();
+
+        if (!headers) return;
+
+        const res = await fetch("http://127.0.0.1:8000/api/reports/summary", {
+          method: "GET",
+          headers,
+        });
+
+        const text = await res.text();
+
+        console.log("REPORT SUMMARY STATUS:", res.status);
+        console.log("REPORT SUMMARY RESPONSE:", text);
+
+        if (!res.ok) {
+          throw new Error("Gagal mengambil summary laporan");
+        }
+
+        const data = JSON.parse(text);
+
         if (data.produkTerlaris) {
           setProdukTerlaris(data.produkTerlaris);
         }
-      })
-      .catch((err) => console.error(err));
+      } catch (err) {
+        console.error("Load Report Summary Error:", err);
+      }
+    };
+
+    loadReportSummary();
   }, []);
 
   const handleFilter = () => {
@@ -164,7 +222,6 @@ export default function ReportsPage() {
       });
     }
 
-    setFilteredData(result);
     setFilteredData(result);
     setIsFiltered(true);
   };
@@ -341,10 +398,35 @@ export default function ReportsPage() {
   const [inventory, setInventory] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/inventory")
-      .then((res) => res.json())
-      .then((data) => setInventory(data))
-      .catch(console.error);
+    const loadInventory = async () => {
+      try {
+        const headers = getAuthHeaders();
+
+        if (!headers) return;
+
+        const res = await fetch("http://127.0.0.1:8000/api/inventory", {
+          method: "GET",
+          headers,
+        });
+
+        const text = await res.text();
+
+        console.log("INVENTORY STATUS:", res.status);
+        console.log("INVENTORY RESPONSE:", text);
+
+        if (!res.ok) {
+          throw new Error("Gagal mengambil data inventory");
+        }
+
+        const data = JSON.parse(text);
+
+        setInventory(data);
+      } catch (err) {
+        console.error("Load Inventory Error:", err);
+      }
+    };
+
+    loadInventory();
   }, []);
 
   const lowStockItems = inventory.filter(
@@ -390,7 +472,11 @@ export default function ReportsPage() {
 
         <div className="p-4 border-t border-amber-700">
           <button
-            onClick={() => router.push("/login")}
+            onClick={() => {
+              localStorage.removeItem("user");
+              localStorage.removeItem("token");
+              router.push("/login");
+            }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-600 transition text-white"
           >
             <LogOut size={20} />
@@ -606,8 +692,17 @@ export default function ReportsPage() {
                         </td>
 
                         <td className="px-6 py-4">
-                          <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
-                            {trx.status}
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              trx.transaction?.payment_method === "cash"
+                                ? "bg-green-100 text-green-700"
+                                : trx.transaction?.payment_method === "qris"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-yellow-100 text-yellow-700"
+                            }`}
+                          >
+                            {trx.transaction?.payment_method?.toUpperCase() ||
+                              "-"}
                           </span>
                         </td>
 

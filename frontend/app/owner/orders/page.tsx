@@ -48,6 +48,19 @@ status:
 
 export default function OrdersPage() {
   const router = useRouter();
+    const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    router.push("/login");
+    return null;
+  }
+
+  return {
+    Accept: "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+};
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeFilter, setActiveFilter] = useState("semua");
 
@@ -64,25 +77,50 @@ export default function OrdersPage() {
 
   // 🔹 FETCH ORDERS FROM API
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch("http://127.0.0.1:8000/api/orders");
-        if (res.ok) {
-          const data = await res.json();
-          setOrders(data);
-        }
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
 
-    fetchOrders();
-    const interval = setInterval(fetchOrders, 5000); // Refresh every 5 seconds
-    return () => clearInterval(interval);
-  }, []);
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      const res = await fetch("http://127.0.0.1:8000/api/orders", {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const text = await res.text();
+
+      console.log("ORDERS STATUS:", res.status);
+      console.log("ORDERS RESPONSE:", text);
+
+      if (!res.ok) {
+        throw new Error(`Gagal mengambil orders: ${res.status}`);
+      }
+
+      const data = JSON.parse(text);
+      setOrders(data);
+
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchOrders();
+
+  const interval = setInterval(fetchOrders, 5000);
+
+  return () => clearInterval(interval);
+}, []);
 
   // 🔹 REAL TIME CLOCK
   const [orders, setOrders] = useState<Order[]>([]);
@@ -169,12 +207,38 @@ const getStatusColor = (status: string) => {
 
   const [inventory, setInventory] = useState<any[]>([]);
 
-  useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/inventory")
-      .then((res) => res.json())
-      .then((data) => setInventory(data))
-      .catch(console.error);
-  }, []);
+useEffect(() => {
+  const fetchInventory = async () => {
+    try {
+      const headers = getAuthHeaders();
+      if (!headers) return;
+
+      const res = await fetch(
+        "http://127.0.0.1:8000/api/inventory",
+        {
+          method: "GET",
+          headers,
+        }
+      );
+
+      const text = await res.text();
+
+      console.log("INVENTORY STATUS:", res.status);
+      console.log("INVENTORY RESPONSE:", text);
+
+      if (!res.ok) {
+        throw new Error(`Gagal mengambil inventory: ${res.status}`);
+      }
+
+      const data = JSON.parse(text);
+      setInventory(data);
+    } catch (error) {
+      console.error("Error fetching inventory:", error);
+    }
+  };
+
+  fetchInventory();
+}, []);
 
   const lowStockItems = inventory.filter(
     (item) => Number(item.qty) <= Number(item.minimum_stock),

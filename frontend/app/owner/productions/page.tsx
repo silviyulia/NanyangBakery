@@ -24,6 +24,19 @@ interface Product {
 
 export default function ProductionPage() {
   const router = useRouter();
+    const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    router.push("/login");
+    return null;
+  }
+
+  return {
+    Accept: "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+}; 
   const pathname = usePathname();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -41,6 +54,8 @@ export default function ProductionPage() {
     { name: "Resep Produk", icon: "👨‍🍳", href: "/owner/recipes" },
     { name: "Karyawan", icon: "👥", href: "/owner/employees" },
   ];
+
+
   const [today, setToday] = useState("");
 
   useEffect(() => {
@@ -51,43 +66,77 @@ export default function ProductionPage() {
     loadProducts();
     loadProductions();
   }, []);
+
 const loadProducts = async () => {
-  const res = await fetch("http://127.0.0.1:8000/api/products/production");
+  try {
+    const headers = getAuthHeaders();
+    if (!headers) return;
 
-  console.log("Status:", res.status);
+    const res = await fetch(
+      "http://127.0.0.1:8000/api/products/production",
+      {
+        method: "GET",
+        headers,
+      }
+    );
+    const text = await res.text();
+    console.log("PRODUCTS PRODUCTION STATUS:", res.status);
+    console.log("PRODUCTS PRODUCTION RESPONSE:", text);
 
-  const data = await res.json();
+    if (!res.ok) {
+      throw new Error(`Gagal mengambil produk: ${res.status}`);
+    }
 
-  console.log("DATA =", data);
-
-  setProducts(data);
+    const data = JSON.parse(text);
+    setProducts(data);
+  } catch (error) {
+    console.error("Error loadProducts:", error);
+  }
 };
+
   const [productions, setProductions] = useState<any[]>([]);
   const [totalProduction, setTotalProduction] = useState(0);
   const [productCount, setProductCount] = useState(0);
 
-  const loadProductions = async () => {
-    try {
-      const res = await fetch("http://127.0.0.1:8000/api/productions");
+const loadProductions = async () => {
+  try {
+    const headers = getAuthHeaders();
 
-      const data = await res.json();
+    if (!headers) return;
 
-      setProductions(data);
+    const res = await fetch(
+      "http://127.0.0.1:8000/api/productions",
+      {
+        method: "GET",
+        headers,
+      }
+    );
 
-      const total = data.reduce(
-        (sum: number, item: any) => sum + Number(item.quantity_produced),
-        0,
-      );
+    const text = await res.text();
+    console.log("PRODUCTIONS STATUS:", res.status);
+    console.log("PRODUCTIONS RESPONSE:", text);
 
-      setTotalProduction(total);
-
-      setProductCount(new Set(data.map((item: any) => item.product_id)).size);
-    } catch (err) {
-      console.error(err);
+    if (!res.ok) {
+      throw new Error(`Gagal mengambil produksi: ${res.status}`);
     }
-  };
 
-  const handleSave = async () => {
+    const data = JSON.parse(text);
+    setProductions(data);
+    const total = data.reduce(
+      (sum: number, item: any) =>
+        sum + Number(item.quantity_produced),
+      0
+    );
+
+    setTotalProduction(total);
+    setProductCount(
+      new Set(data.map((item: any) => item.product_id)).size
+    );
+  } catch (err) {
+    console.error("Error loadProductions:", err);
+  }
+};
+const handleSave = async () => {
   if (!productId || !quantity) {
     Swal.fire({
       icon: "warning",
@@ -98,6 +147,10 @@ const loadProducts = async () => {
   }
 
   try {
+    const headers = getAuthHeaders();
+
+    if (!headers) return;
+
     const url = editId
       ? `http://127.0.0.1:8000/api/productions/${editId}`
       : "http://127.0.0.1:8000/api/productions";
@@ -107,6 +160,7 @@ const loadProducts = async () => {
     const response = await fetch(url, {
       method,
       headers: {
+        ...headers,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -115,27 +169,32 @@ const loadProducts = async () => {
       }),
     });
 
-    const data = await response.json();
+    const text = await response.text();
 
-if (!response.ok) {
-  const result = await Swal.fire({
-    icon: "error",
-    title: "Produksi Gagal",
-    html: `
-      <b>${data.message}</b><br><br>
-      Silakan lakukan <b>restok bahan baku</b> terlebih dahulu.
-    `,
-    confirmButtonText: "Ke Halaman Stok",
-    showCancelButton: true,
-    cancelButtonText: "Tutup",
-  });
+    console.log("SAVE PRODUCTION STATUS:", response.status);
+    console.log("SAVE PRODUCTION RESPONSE:", text);
 
-  if (result.isConfirmed) {
-    router.push("/owner/inventory");
-  }
+    const data = JSON.parse(text);
 
-  return;
-}
+    if (!response.ok) {
+      const result = await Swal.fire({
+        icon: "error",
+        title: "Produksi Gagal",
+        html: `
+          <b>${data.message || "Terjadi kesalahan."}</b><br><br>
+          Silakan lakukan <b>restok bahan baku</b> terlebih dahulu.
+        `,
+        confirmButtonText: "Ke Halaman Stok",
+        showCancelButton: true,
+        cancelButtonText: "Tutup",
+      });
+
+      if (result.isConfirmed) {
+        router.push("/owner/inventory");
+      }
+
+      return;
+    }
 
     Swal.fire({
       icon: "success",
@@ -146,6 +205,7 @@ if (!response.ok) {
     });
 
     await loadProductions();
+
     setProductId("");
     setQuantity("");
   } catch (error: any) {
@@ -200,19 +260,48 @@ if (!response.ok) {
   }
 }; */}
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    router.push("/login");
-  };
+const handleLogout = () => {
+  localStorage.removeItem("user");
+  localStorage.removeItem("token");
+  router.push("/login");
+};
 
   const [inventory, setInventory] = useState<any[]>([]);
 
-  useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/inventory")
-      .then((res) => res.json())
-      .then((data) => setInventory(data))
-      .catch(console.error);
-  }, []);
+useEffect(() => {
+  const loadInventory = async () => {
+    try {
+      const headers = getAuthHeaders();
+
+      if (!headers) return;
+
+      const res = await fetch(
+        "http://127.0.0.1:8000/api/inventory",
+        {
+          method: "GET",
+          headers,
+        }
+      );
+
+      const text = await res.text();
+
+      console.log("INVENTORY STATUS:", res.status);
+      console.log("INVENTORY RESPONSE:", text);
+
+      if (!res.ok) {
+        throw new Error(`Gagal mengambil inventory: ${res.status}`);
+      }
+
+      const data = JSON.parse(text);
+
+      setInventory(data);
+    } catch (error) {
+      console.error("Error loadInventory:", error);
+    }
+  };
+
+  loadInventory();
+}, []);
 
   const lowStockItems = inventory.filter(
     (item) => Number(item.qty) <= Number(item.minimum_stock),
@@ -257,7 +346,7 @@ if (!response.ok) {
 
         <div className="p-4 border-t border-amber-700">
           <button
-            onClick={() => router.push("/login")}
+            onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-600 transition text-white"
           >
             <LogOut size={20} />

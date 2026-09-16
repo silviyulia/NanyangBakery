@@ -54,27 +54,45 @@ export default function KasirDashboard() {
   // Fetch orders dari API
   useEffect(() => {
     const fetchOrders = async () => {
-      try {
-        setLoading(true);
+  try {
+    setLoading(true);
 
-        const res = await fetch("http://127.0.0.1:8000/api/orders");
+    const token = localStorage.getItem("token");
 
-        if (!res.ok) {
-          throw new Error("Gagal mengambil data pesanan");
-        }
+    if (!token) {
+      console.error("Token tidak ditemukan.");
+      router.push("/login");
+      return;
+    }
 
-        const data = await res.json();
+    const res = await fetch("http://127.0.0.1:8000/api/orders", {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-        console.log("ORDERS =", data);
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
 
-        setOrders(data);
-      } catch (error) {
-        console.error("Error loading orders:", error);
-        setOrders([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+      console.error("Gagal mengambil orders:", res.status, errorData);
+
+      throw new Error("Gagal mengambil data pesanan");
+    }
+
+    const data = await res.json();
+
+    console.log("ORDERS =", data);
+
+    setOrders(data);
+  } catch (error) {
+    console.error("Error loading orders:", error);
+    setOrders([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
     fetchOrders();
     //refres setiap 5 detik
@@ -137,34 +155,54 @@ export default function KasirDashboard() {
       minute: "2-digit",
     });
   };
-  const confirmOrder = async (id: number) => {
-    try {
-      const res = await fetch(`http://127.0.0.1:8000/api/orders/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: "confirmed",
-        }),
-      });
+const confirmOrder = async (id: number) => {
+  try {
+    const token = localStorage.getItem("token");
 
-      if (!res.ok) {
-        throw new Error("Gagal konfirmasi");
-      }
+    if (!token) {
+      alert("Sesi login tidak ditemukan. Silakan login kembali.");
+      router.push("/login");
+      return;
+    }
 
-      setOrders((prev) =>
-        prev.map((order) =>
-          order.id === id ? { ...order, status: "confirmed" } : order,
-        ),
+    const res = await fetch(`http://127.0.0.1:8000/api/orders/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        status: "confirmed",
+      }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+
+      console.error(
+        "Gagal konfirmasi order:",
+        res.status,
+        errorData
       );
 
-      router.push(`/kasir/transaksi?order=${id}`);
-    } catch (error) {
-      console.error(error);
-      alert("Gagal mengkonfirmasi pesanan");
+      throw new Error("Gagal konfirmasi");
     }
-  };
+
+    setOrders((prev) =>
+      prev.map((order) =>
+        order.id === id
+          ? { ...order, status: "confirmed" }
+          : order
+      )
+    );
+
+    router.push(`/kasir/transaksi?order=${id}`);
+  } catch (error) {
+    console.error(error);
+    alert("Gagal mengkonfirmasi pesanan");
+  }
+};
 
   console.log("ORDERS =", orders);
   console.log(

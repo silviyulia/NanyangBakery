@@ -7,6 +7,19 @@ import Link from "next/link";
 
 export default function InventoryPage() {
   const router = useRouter();
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      router.push("/login");
+      return null;
+    }
+
+    return {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  };
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("Semua");
   const [editMode, setEditMode] = useState(false);
@@ -40,21 +53,42 @@ export default function InventoryPage() {
   const [stockData, setStockData] = useState<any[]>([]);
   const loadInventory = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/inventory");
+      const headers = getAuthHeaders();
 
-      const data = await res.json();
+      if (!headers) return;
+
+      const res = await fetch("http://127.0.0.1:8000/api/inventory", {
+        method: "GET",
+        headers,
+      });
+
+      const text = await res.text();
+
+      console.log("INVENTORY STATUS:", res.status);
+      console.log("INVENTORY RESPONSE:", text);
+
+      if (!res.ok) {
+        throw new Error("Gagal mengambil data inventory");
+      }
+
+      const data = JSON.parse(text);
 
       setStockData(data);
     } catch (error) {
-      console.error(error);
+      console.error("Load Inventory Error:", error);
     }
   };
+
   useEffect(() => {
     loadInventory();
   }, []);
 
   const handleAddIngredient = async () => {
     try {
+      const headers = getAuthHeaders();
+
+      if (!headers) return;
+
       let url = "http://127.0.0.1:8000/api/inventory";
       let method = "POST";
 
@@ -63,12 +97,12 @@ export default function InventoryPage() {
         method = "PUT";
       }
 
-const res = await fetch(url, {
-  method,
-  headers:{
-    "Content-Type":"application/json",
-    "Accept":"application/json",
-  },
+      const res = await fetch(url, {
+        method,
+        headers: {
+          ...headers,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           ingredient_name: form.nama,
           qty: Number(form.stok),
@@ -124,11 +158,16 @@ const res = await fetch(url, {
 
   const handleInputStock = async () => {
     try {
+      const headers = getAuthHeaders();
+
+      if (!headers) return;
+
       const res = await fetch(
         `http://127.0.0.1:8000/api/inventory/${selectedItem.ingredient_id}/stock`,
         {
           method: "PUT",
           headers: {
+            ...headers,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -137,13 +176,14 @@ const res = await fetch(url, {
         },
       );
 
-const text = await res.text();
+      const text = await res.text();
 
-console.log("RESPONSE DARI SERVER:", text);
+      console.log("RESPONSE DARI SERVER:", text);
 
-if (!res.ok) {
-  throw new Error(text);
-}
+      if (!res.ok) {
+        throw new Error(text);
+      }
+
       await loadInventory();
 
       setShowInputModal(false);
@@ -160,10 +200,15 @@ if (!res.ok) {
     if (!confirmDelete) return;
 
     try {
+      const headers = getAuthHeaders();
+
+      if (!headers) return;
+
       const res = await fetch(
         `http://127.0.0.1:8000/api/inventory/${ingredientId}`,
         {
           method: "DELETE",
+          headers,
         },
       );
 
@@ -233,7 +278,11 @@ if (!res.ok) {
 
         <div className="p-4 border-t border-amber-700">
           <button
-            onClick={() => router.push("/login")}
+            onClick={() => {
+              localStorage.removeItem("user");
+              localStorage.removeItem("token");
+              router.push("/login");
+            }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-600 transition text-white"
           >
             <LogOut size={20} />
@@ -289,7 +338,9 @@ if (!res.ok) {
             <button onClick={() => setSidebarOpen(!sidebarOpen)}>
               {sidebarOpen ? <X /> : <Menu />}
             </button>
-            <h2 className="text-3xl font-bold">Dashboard Monitoring</h2>
+            <h2 className="text-3xl font-bold text-white">
+              Dashboard Monitoring
+            </h2>{" "}
           </div>
           <div className="flex items-center gap-4">
             <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition">
@@ -298,7 +349,7 @@ if (!res.ok) {
             <div className="flex items-center gap-2 bg-amber-500 bg-opacity-20 px-4 py-2 rounded-lg">
               <User size={20} />
               <div>
-                <p className="text-sm font-semibold">Admin User</p>
+                <p className="text-sm font-semibold text-white">Admin User</p>
                 <p className="text-xs text-amber-200">Owner</p>
               </div>
             </div>
@@ -309,7 +360,9 @@ if (!res.ok) {
         <main className="flex-1 p-8 space-y-6 overflow-y-auto">
           {/* TITLE */}
           <div className="flex justify-between">
-            <h2 className="text-2xl font-bold">Manajemen stok bahan baku</h2>
+            <h2 className="text-3xl font-bold text-amber-950">
+              Manajemen stok bahan baku
+            </h2>
             <button
               onClick={() => setShowTambahModal(true)}
               className="bg-orange-500 text-white px-4 py-2 rounded-lg"

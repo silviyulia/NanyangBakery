@@ -54,9 +54,11 @@ export default function transaksiPage() {
   const [categories, setCategories] = useState(["Semua"]);
   const [loading, setLoading] = useState(true);
   const orderId = searchParams.get("order");
-  {/*const [orderType, setOrderType] = useState<
+  {
+    /*const [orderType, setOrderType] = useState<
   "waitres" | "manual-dinein" | "takeaway"
->("waitres"); */}
+>("waitres"); */
+  }
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [cart, setCart] = useState<
@@ -112,44 +114,106 @@ export default function transaksiPage() {
       try {
         setLoading(true);
 
-        // Fetch products
-        const productsRes = await fetch("http://127.0.0.1:8000/api/products");
-        if (productsRes.ok) {
-          const productsData = await productsRes.json();
-          setProducts(productsData);
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          console.error("Token tidak ditemukan.");
+          router.push("/login");
+          return;
         }
 
-        // Fetch categories
+        // ================= FETCH PRODUCTS =================
+        const productsRes = await fetch("http://127.0.0.1:8000/api/products", {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!productsRes.ok) {
+          const errorData = await productsRes.json().catch(() => ({}));
+
+          console.error(
+            "Gagal mengambil products:",
+            productsRes.status,
+            errorData,
+          );
+
+          throw new Error("Gagal mengambil data produk");
+        }
+
+        const productsData = await productsRes.json();
+
+        console.log("PRODUCTS =", productsData);
+
+        setProducts(productsData);
+
+        // ================= FETCH CATEGORIES =================
         const categoriesRes = await fetch(
           "http://127.0.0.1:8000/api/categories",
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          },
         );
-        if (categoriesRes.ok) {
-          const categoriesData = await categoriesRes.json();
-          const categoryNames = [
-            "Semua",
-            ...categoriesData.map(
-              (cat: any) => cat.name || `Kategori ${cat.id}`,
-            ),
-          ];
-          setCategories(categoryNames);
+
+        if (!categoriesRes.ok) {
+          const errorData = await categoriesRes.json().catch(() => ({}));
+
+          console.error(
+            "Gagal mengambil categories:",
+            categoriesRes.status,
+            errorData,
+          );
+
+          throw new Error("Gagal mengambil kategori");
         }
+
+        const categoriesData = await categoriesRes.json();
+
+        console.log("CATEGORIES =", categoriesData);
+
+        const categoryNames = [
+          "Semua",
+          ...categoriesData.map((cat: any) => cat.name || `Kategori ${cat.id}`),
+        ];
+
+        setCategories(categoryNames);
       } catch (error) {
         console.error("Error fetching data:", error);
+        setProducts([]);
+        setCategories(["Semua"]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (!orderId) return;
 
     const fetchOrder = async () => {
       try {
-        const res = await fetch(`http://127.0.0.1:8000/api/orders/${orderId}`);
+        const token = localStorage.getItem("token");
 
+        if (!token) {
+          router.push("/login");
+          return;
+        }
+
+        const res = await fetch(`http://127.0.0.1:8000/api/orders/${orderId}`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
         const data = await res.json();
 
         setOrder(data);
@@ -235,40 +299,41 @@ export default function transaksiPage() {
     }
   };
 
-const handleSaveOrder = async () => {
-  try {
-    if (!orderId) {
-      alert("Order tidak ditemukan");
-      return;
-    }
-
-    const res = await fetch(
-      `http://127.0.0.1:8000/api/orders/${orderId}/items`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          items: cart,
-        }),
+  const handleSaveOrder = async () => {
+    try {
+      if (!orderId) {
+        alert("Order tidak ditemukan");
+        return;
       }
-    );
 
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(err);
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/orders/${orderId}/items`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            items: cart,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err);
+      }
+
+      alert("Pesanan berhasil disimpan");
+
+      router.push("/kasir");
+    } catch (error) {
+      console.error(error);
+      alert("Gagal menyimpan perubahan");
     }
-
-    alert("Pesanan berhasil disimpan");
-
-    router.push("/kasir");
-  } catch (error) {
-    console.error(error);
-    alert("Gagal menyimpan perubahan");
-  }
-};
+  };
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -296,6 +361,7 @@ const handleSaveOrder = async () => {
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({
           items: cart,
@@ -317,6 +383,7 @@ const handleSaveOrder = async () => {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
       body: JSON.stringify({
         order_id: Number(orderId),
@@ -342,6 +409,8 @@ const handleSaveOrder = async () => {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
           body: JSON.stringify({
             status: "selesai",
@@ -390,6 +459,7 @@ const handleSaveOrder = async () => {
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
           body: JSON.stringify({
             order_id: Number(orderId),
@@ -549,7 +619,7 @@ const handleSaveOrder = async () => {
                 </div>
               </div>
             )}
-{/*<button
+            {/*<button
   onClick={startManualOrder}
   className="bg-orange-500 text-white px-4 py-2 rounded-xl"
 >

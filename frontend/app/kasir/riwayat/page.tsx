@@ -24,7 +24,15 @@ export default function RiwayatPage() {
     const fetchTransactions = async () => {
       try {
         setLoading(true);
-        const res = await fetch("http://127.0.0.1:8000/api/transactions");
+        const token = localStorage.getItem("token");
+
+        const res = await fetch("http://127.0.0.1:8000/api/transactions", {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!res.ok) throw new Error("Gagal mengambil data transaksi");
         const data = await res.json();
         setTransaksi(data);
@@ -48,24 +56,23 @@ export default function RiwayatPage() {
     });
   };
 
-const formatTime = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
-const downloadReceipt = (transactionId: string) => {
-  window.open(
-    `http://127.0.0.1:8000/api/transactions/${transactionId}/download`,
-    "_blank"
-  );
-};
+  const downloadReceipt = (transactionId: string) => {
+    window.open(
+      `http://127.0.0.1:8000/api/transactions/${transactionId}/download`,
+      "_blank",
+    );
+  };
 
-return (
+  return (
     <Sidebar>
-
       {/* MAIN */}
       <main className="flex-1">
         {/* CONTENT */}
@@ -167,25 +174,32 @@ return (
                           </span>
                         </td>
 
-<td className="px-6 py-4 text-center">
-  <button
-    onClick={() => downloadReceipt(item.transaction_id)}
-    className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-medium transition"
-  >
-    Unduh
-  </button>
-</td>
+                        <td className="px-6 py-4 text-center">
+                          <button
+                            onClick={() => downloadReceipt(item.transaction_id)}
+                            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-medium transition"
+                          >
+                            Unduh
+                          </button>
+                        </td>
+                        
                       </tr>
                     ))
                   ) : !loading ? (
                     <tr>
-                      <td colSpan={8} className="text-center text-gray-400 py-16">
+                      <td
+                        colSpan={8}
+                        className="text-center text-gray-400 py-16"
+                      >
                         Tidak ada riwayat transaksi
                       </td>
                     </tr>
                   ) : (
                     <tr>
-                      <td colSpan={8} className="text-center text-gray-400 py-16">
+                      <td
+                        colSpan={8}
+                        className="text-center text-gray-400 py-16"
+                      >
                         Loading...
                       </td>
                     </tr>

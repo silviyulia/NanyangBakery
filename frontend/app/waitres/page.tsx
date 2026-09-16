@@ -28,23 +28,48 @@ export default function WaitresPage() {
 
   const loadProducts = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/products");
-      const data = await res.json();
+      const token = localStorage.getItem("token");
 
-      const formattedMenu = data.map((item: any) => ({
-        id: item.product_id,
-        name: item.name,
-        category: categoryMap[item.category_id] || "Lainnya",
-        price: Number(item.price),
-        stock: Number(item.stock),
-        image: item.image
-          ? `http://127.0.0.1:8000/storage/${item.image}`
-          : "/no-image.png",
-      }));
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      const res = await fetch("http://127.0.0.1:8000/api/products", {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const text = await res.text();
+
+      console.log("PRODUCTS STATUS:", res.status);
+      console.log("PRODUCTS RESPONSE:", text);
+
+      if (!res.ok) {
+        throw new Error(`Gagal mengambil produk: ${res.status}`);
+      }
+
+      const data = JSON.parse(text);
+
+      const formattedMenu = data
+        .filter((item: any) => item.status === "active")
+        .map((item: any) => ({
+          id: item.product_id,
+          name: item.name,
+          category: categoryMap[item.category_id] || "Lainnya",
+          price: Number(item.price),
+          stock: Number(item.stock),
+          image: item.image
+            ? `http://127.0.0.1:8000/storage/${item.image}`
+            : "/no-image.png",
+        }));
 
       setMenu(formattedMenu);
     } catch (error) {
-      console.error(error);
+      console.error("Error loadProducts:", error);
     }
   };
 
@@ -69,7 +94,21 @@ export default function WaitresPage() {
 
   const loadTables = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/tables");
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      const res = await fetch("http://127.0.0.1:8000/api/tables", {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       const data = await res.json();
 
       console.log("TABLE DATA", data);
@@ -79,15 +118,29 @@ export default function WaitresPage() {
       console.error(error);
     }
   };
+
   const loadOccupiedTables = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/occupied-tables");
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      const res = await fetch("http://127.0.0.1:8000/api/occupied-tables", {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       const data = await res.json();
 
       setOccupiedTables(data);
     } catch (error) {
-      console.error(error);
+      console.error("Error loadOccupiedTables:", error);
     }
   };
 
@@ -134,13 +187,13 @@ export default function WaitresPage() {
     setCart([]);
   };
 
-useEffect(() => {
-  const storedUser = localStorage.getItem("user");
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
 
-  if (storedUser) {
-    setUser(JSON.parse(storedUser));
-  }
-}, []);
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
   const sendToKasir = async () => {
     if (!tableNumber || cart.length === 0) return;
 
@@ -149,15 +202,17 @@ useEffect(() => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-body: JSON.stringify({
-  table_id: tableNumber,
-  waitres_id: user.user_id,
-  items: cart.map((item) => ({
-    product_id: item.id,
-    quantity: item.qty,
-  })),
-}),
+        body: JSON.stringify({
+          table_id: tableNumber,
+          waitres_id: user.user_id,
+          items: cart.map((item) => ({
+            product_id: item.id,
+            quantity: item.qty,
+          })),
+        }),
       });
 
       const data = await res.json();
@@ -169,7 +224,6 @@ body: JSON.stringify({
 
       alert("Pesanan berhasil dibuat");
       setCart([]);
-      
     } catch (error) {
       console.error(error);
       alert("Gagal membuat pesanan");
@@ -301,7 +355,7 @@ body: JSON.stringify({
                 <div className="mt-3 grid grid-cols-4 gap-2">
                   {tables.map((table) => {
                     const occupied = occupiedTables.includes(table.table_id);
-                const selected = tableNumber === table.table_id;
+                    const selected = tableNumber === table.table_id;
                     return (
                       <button
                         key={table.table_id}

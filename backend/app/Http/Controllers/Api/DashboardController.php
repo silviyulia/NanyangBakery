@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Product;
 use App\Models\Order;
 use App\Models\User;
+use App\Models\OrderItem;
 
 class DashboardController extends Controller
 {
@@ -79,7 +80,7 @@ public function summary()
         ->select(
             'id',
             'table_id',
-            'kasir_id',
+            'waitres_id',
             'total_amount',
             'created_at'
         )

@@ -21,6 +21,17 @@ interface Category {
 
 export default function ProductsPage() {
   const router = useRouter();
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/login");
+      return null;
+    }
+    return {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  };
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [search, setSearch] = useState("");
@@ -50,13 +61,25 @@ export default function ProductsPage() {
 
   const loadProducts = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/products");
+      const headers = getAuthHeaders();
+
+      if (!headers) return;
+
+      const res = await fetch("http://127.0.0.1:8000/api/products", {
+        method: "GET",
+        headers,
+      });
+
+      const text = await res.text();
+
+      console.log("PRODUCTS STATUS:", res.status);
+      console.log("PRODUCTS RESPONSE:", text);
 
       if (!res.ok) {
         throw new Error("Gagal mengambil data produk");
       }
 
-      const data = await res.json();
+      const data = JSON.parse(text);
 
       console.log("Products:", data);
 
@@ -68,13 +91,25 @@ export default function ProductsPage() {
 
   const loadCategories = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/categories");
+      const headers = getAuthHeaders();
+
+      if (!headers) return;
+
+      const res = await fetch("http://127.0.0.1:8000/api/categories", {
+        method: "GET",
+        headers,
+      });
+
+      const text = await res.text();
+
+      console.log("CATEGORIES STATUS:", res.status);
+      console.log("CATEGORIES RESPONSE:", text);
 
       if (!res.ok) {
         throw new Error("Gagal mengambil kategori");
       }
 
-      const data = await res.json();
+      const data = JSON.parse(text);
 
       setCategories(data);
     } catch (error) {
@@ -92,9 +127,12 @@ export default function ProductsPage() {
       alert("Semua field harus diisi");
       return;
     }
-    const res = await fetch("http://127.0.0.1:8000/api/products");
-    console.log(await res.json());
+
     try {
+      const headers = getAuthHeaders();
+
+      if (!headers) return;
+
       const formData = new FormData();
 
       formData.append("category_id", category_id);
@@ -105,6 +143,7 @@ export default function ProductsPage() {
       if (image) {
         formData.append("image", image);
       }
+
       const url = editId
         ? `http://127.0.0.1:8000/api/products/${editId}`
         : "http://127.0.0.1:8000/api/products";
@@ -115,6 +154,9 @@ export default function ProductsPage() {
 
       const res = await fetch(url, {
         method: "POST",
+        headers: {
+          ...headers,
+        },
         body: formData,
       });
 
@@ -134,7 +176,8 @@ export default function ProductsPage() {
       }
 
       const responseText = await res.text();
-      console.log(responseText);
+
+      console.log("Response Text:", responseText);
 
       let data;
 
@@ -143,8 +186,6 @@ export default function ProductsPage() {
       } catch {
         data = {};
       }
-
-      console.log(responseText);
 
       console.log("Response:", data, "Status:", res.status);
 
@@ -169,6 +210,7 @@ export default function ProductsPage() {
       await loadProducts();
     } catch (error) {
       console.error("Error:", error);
+
       alert(
         `${editId ? "Gagal memperbarui" : "Gagal menambahkan"} produk: ${error}`,
       );
@@ -195,20 +237,37 @@ export default function ProductsPage() {
     }
 
     try {
+      const headers = getAuthHeaders();
+
+      if (!headers) return;
+
       const res = await fetch(
         `http://127.0.0.1:8000/api/products/${product_id}`,
         {
           method: "DELETE",
+          headers,
         },
       );
 
-      const data = await res.json();
+      const text = await res.text();
+
+      console.log("DELETE PRODUCT STATUS:", res.status);
+      console.log("DELETE PRODUCT RESPONSE:", text);
+
+      let data;
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = {};
+      }
 
       if (!res.ok) {
-        throw new Error(data.message);
+        throw new Error(data.message || "Gagal menghapus produk");
       }
 
       alert("Produk berhasil dihapus");
+
       await loadProducts();
     } catch (error) {
       console.error(error);
@@ -239,10 +298,30 @@ export default function ProductsPage() {
   const [inventory, setInventory] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/inventory")
-      .then((res) => res.json())
-      .then((data) => setInventory(data))
-      .catch(console.error);
+    const loadInventory = async () => {
+      try {
+        const headers = getAuthHeaders();
+
+        if (!headers) return;
+
+        const res = await fetch("http://127.0.0.1:8000/api/inventory", {
+          method: "GET",
+          headers,
+        });
+        const text = await res.text();
+        console.log("INVENTORY STATUS:", res.status);
+        console.log("INVENTORY RESPONSE:", text);
+        if (!res.ok) {
+          throw new Error(`Gagal mengambil inventory: ${res.status}`);
+        }
+
+        const data = JSON.parse(text);
+        setInventory(data);
+      } catch (error) {
+        console.error("Error loadInventory:", error);
+      }
+    };
+    loadInventory();
   }, []);
 
   const lowStockItems = inventory.filter(
@@ -286,7 +365,11 @@ export default function ProductsPage() {
 
         <div className="p-4 border-t border-amber-700">
           <button
-            onClick={() => router.push("/login")}
+            onClick={() => {
+              localStorage.removeItem("user");
+              localStorage.removeItem("token");
+              router.push("/login");
+            }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-600 transition text-white"
           >
             <LogOut size={20} />
@@ -576,7 +659,7 @@ export default function ProductsPage() {
                     </div>
                   )}
                 </div>
-                
+
                 {/* BUTTON */}
                 <div className="flex gap-2 mt-3">
                   <button

@@ -15,6 +15,19 @@ interface Employee {
 
 export default function EmployeesPage() {
   const router = useRouter();
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      router.push("/login");
+      return null;
+    }
+
+    return {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  };
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -43,10 +56,29 @@ export default function EmployeesPage() {
 
   // Ambil data karyawan dari backend
   const fetchEmployees = async () => {
-    const res = await fetch("http://127.0.0.1:8000/api/users");
-    if (res.ok) {
-      const data = await res.json();
+    try {
+      const headers = getAuthHeaders();
+
+      if (!headers) return;
+
+      const res = await fetch("http://127.0.0.1:8000/api/users", {
+        method: "GET",
+        headers,
+      });
+
+      const text = await res.text();
+
+      console.log("USERS STATUS:", res.status);
+      console.log("USERS RESPONSE:", text);
+
+      if (!res.ok) {
+        throw new Error("Gagal mengambil data karyawan");
+      }
+
+      const data = JSON.parse(text);
       setEmployees(data);
+    } catch (error) {
+      console.error("Load Employees Error:", error);
     }
   };
 
@@ -56,65 +88,73 @@ export default function EmployeesPage() {
 
   // Submit tambah karyawan
   const handleSubmit = async () => {
-  setIsLoading(true);
-  setError("");
-  setSuccess("");
+    setIsLoading(true);
+    setError("");
+    setSuccess("");
 
-  const url = editMode
-    ? `http://127.0.0.1:8000/api/users/${editId}`
-    : "http://127.0.0.1:8000/api/register";
+    const headers = getAuthHeaders();
 
-  const method = editMode ? "PUT" : "POST";
+    if (!headers) {
+      setIsLoading(false);
+      return;
+    }
 
-  const body: any = {
-    name: form.name,
-    email: form.email,
-    phone: form.phone,
-    role: form.role,
-  };
+    const url = editMode
+      ? `http://127.0.0.1:8000/api/users/${editId}`
+      : "http://127.0.0.1:8000/api/register";
 
-  if (form.password !== "") {
-    body.password = form.password;
-  }
+    const method = editMode ? "PUT" : "POST";
 
-  const res = await fetch(url, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+    const body: any = {
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      role: form.role,
+    };
 
-  const data = await res.json();
+    if (form.password !== "") {
+      body.password = form.password;
+    }
 
-  if (!res.ok) {
-    setError(data.message || "Gagal menyimpan data");
+    const res = await fetch(url, {
+      method,
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.message || "Gagal menyimpan data");
+      setIsLoading(false);
+      return;
+    }
+
+    setSuccess(
+      editMode
+        ? "Data karyawan berhasil diupdate!"
+        : "Karyawan berhasil ditambahkan!",
+    );
+
+    setShowModal(false);
+    setEditMode(false);
+    setEditId(null);
+
+    setForm({
+      name: "",
+      email: "",
+      password: "",
+      phone: "",
+      role: "kasir",
+    });
+
+    fetchEmployees();
+
     setIsLoading(false);
-    return;
-  }
-
-  setSuccess(
-    editMode
-      ? "Data karyawan berhasil diupdate!"
-      : "Karyawan berhasil ditambahkan!"
-  );
-
-  setShowModal(false);
-  setEditMode(false);
-  setEditId(null);
-
-  setForm({
-    name: "",
-    email: "",
-    password: "",
-    phone: "",
-    role: "kasir",
-  });
-
-  fetchEmployees();
-
-  setIsLoading(false);
-};
+  };
 
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -135,8 +175,13 @@ export default function EmployeesPage() {
 
     if (!ok) return;
 
+    const headers = getAuthHeaders();
+
+    if (!headers) return;
+
     const res = await fetch(`http://127.0.0.1:8000/api/users/${id}`, {
       method: "DELETE",
+      headers,
     });
 
     const data = await res.json();
@@ -149,10 +194,34 @@ export default function EmployeesPage() {
   const [inventory, setInventory] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/inventory")
-      .then((res) => res.json())
-      .then((data) => setInventory(data))
-      .catch(console.error);
+    const loadInventory = async () => {
+      try {
+        const headers = getAuthHeaders();
+
+        if (!headers) return;
+
+        const res = await fetch("http://127.0.0.1:8000/api/inventory", {
+          method: "GET",
+          headers,
+        });
+
+        const text = await res.text();
+
+        console.log("INVENTORY STATUS:", res.status);
+        console.log("INVENTORY RESPONSE:", text);
+
+        if (!res.ok) {
+          throw new Error("Gagal mengambil data inventory");
+        }
+
+        const data = JSON.parse(text);
+        setInventory(data);
+      } catch (error) {
+        console.error("Load Inventory Error:", error);
+      }
+    };
+
+    loadInventory();
   }, []);
 
   const lowStockItems = inventory.filter(
@@ -198,7 +267,11 @@ export default function EmployeesPage() {
 
         <div className="p-4 border-t border-amber-700">
           <button
-            onClick={() => router.push("/login")}
+            onClick={() => {
+              localStorage.removeItem("user");
+              localStorage.removeItem("token");
+              router.push("/login");
+            }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-600 transition text-white"
           >
             <LogOut size={20} />
@@ -322,7 +395,7 @@ export default function EmployeesPage() {
         <div className="flex-1 flex flex-col">
           <main className="flex-1 overflow-auto p-8 space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Data Karyawan</h2>
+             <h2 className="text-3xl font-bold text-amber-950">Data Karyawan</h2>
               <button
                 onClick={() => setShowModal(true)}
                 className="bg-orange-500 text-white px-4 py-2 rounded-lg"
@@ -349,7 +422,7 @@ export default function EmployeesPage() {
                     <th className="px-6 py-3 text-center">Aksi</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="text-gray-800">
                   {employees.length === 0 ? (
                     <tr>
                       <td

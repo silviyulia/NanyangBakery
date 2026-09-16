@@ -45,21 +45,79 @@ export default function OwnerDashboard() {
     { name: "Karyawan", icon: "👥", href: "/owner/employees" },
   ];
 
-  useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/dashboard")
-      .then((res) => res.json())
-      .then((data) => setDashboardData(data))
-      .catch((err) => console.error(err));
-  }, []);
+  const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
 
-  useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/orders")
-      .then((res) => res.json())
-      .then((data) => {
-        setTransactionData(data);
-      })
-      .catch(console.error);
-  }, []);
+  if (!token) {
+    router.push("/login");
+    return null;
+  }
+
+  return {
+    Accept: "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+}; 
+
+useEffect(() => {
+  const fetchDashboard = async () => {
+    try {
+      const headers = getAuthHeaders();
+      if (!headers) return;
+
+      const res = await fetch(
+        "http://127.0.0.1:8000/api/dashboard",
+        { headers }
+      );
+
+      const text = await res.text();
+
+      console.log("DASHBOARD STATUS:", res.status);
+      console.log("DASHBOARD RESPONSE:", text);
+
+      if (!res.ok) {
+        throw new Error(`Dashboard gagal: ${res.status}`);
+      }
+
+      const data = JSON.parse(text);
+      setDashboardData(data);
+    } catch (err) {
+      console.error("Dashboard error:", err);
+    }
+  };
+
+  fetchDashboard();
+}, []);
+
+useEffect(() => {
+  const fetchOrders = async () => {
+    try {
+      const headers = getAuthHeaders();
+      if (!headers) return;
+
+      const res = await fetch(
+        "http://127.0.0.1:8000/api/dashboard/orders",
+        { headers }
+      );
+
+      const text = await res.text();
+
+      console.log("DASHBOARD ORDERS STATUS:", res.status);
+      console.log("DASHBOARD ORDERS RESPONSE:", text);
+
+      if (!res.ok) {
+        throw new Error(`Orders gagal: ${res.status}`);
+      }
+
+      const data = JSON.parse(text);
+      setTransactionData(data);
+    } catch (err) {
+      console.error("Dashboard orders error:", err);
+    }
+  };
+
+  fetchOrders();
+}, []);
 
   // Data yang ditampilkan
   const dataToShow = filteredData.length > 0 ? filteredData : transactionData;
@@ -88,33 +146,100 @@ export default function OwnerDashboard() {
 
   //Produk terlaris
   const [produkTerlaris, setProdukTerlaris] = useState("-");
-  useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/reports/summary")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.produkTerlaris) {
-          setProdukTerlaris(data.produkTerlaris);
-        }
-      })
-      .catch((err) => console.error(err));
-  }, []);
+useEffect(() => {
+  const fetchSummary = async () => {
+    try {
+      const headers = getAuthHeaders();
+      if (!headers) return;
+
+      const res = await fetch(
+        "http://127.0.0.1:8000/api/dashboard/summary",
+        { headers }
+      );
+
+      const text = await res.text();
+
+      console.log("SUMMARY STATUS:", res.status);
+      console.log("SUMMARY RESPONSE:", text);
+
+      if (!res.ok) {
+        throw new Error(`Summary gagal: ${res.status}`);
+      }
+
+      const data = JSON.parse(text);
+
+      if (data.produkTerlaris) {
+        setProdukTerlaris(data.produkTerlaris);
+      }
+    } catch (err) {
+      console.error("Summary error:", err);
+    }
+  };
+
+  fetchSummary();
+}, []);
 
   const [salesData, setSalesData] = useState([]);
-  useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/sales-chart")
-      .then((res) => res.json())
-      .then((data) => setSalesData(data))
-      .catch((err) => console.error(err));
-  }, []);
+useEffect(() => {
+  const fetchSalesChart = async () => {
+    try {
+      const headers = getAuthHeaders();
+      if (!headers) return;
+
+      const res = await fetch(
+        "http://127.0.0.1:8000/api/sales-chart",
+        { headers }
+      );
+
+      const text = await res.text();
+
+      console.log("SALES CHART STATUS:", res.status);
+      console.log("SALES CHART RESPONSE:", text);
+
+      if (!res.ok) {
+        throw new Error(`Sales chart gagal: ${res.status}`);
+      }
+
+      const data = JSON.parse(text);
+      setSalesData(data);
+    } catch (err) {
+      console.error("Sales chart error:", err);
+    }
+  };
+
+  fetchSalesChart();
+}, []);
 
   const [inventory, setInventory] = useState<any[]>([]);
 
-  useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/inventory")
-      .then((res) => res.json())
-      .then((data) => setInventory(data))
-      .catch(console.error);
-  }, []);
+useEffect(() => {
+  const fetchInventory = async () => {
+    try {
+      const headers = getAuthHeaders();
+      if (!headers) return;
+
+      const res = await fetch(
+        "http://127.0.0.1:8000/api/inventory",
+        { headers }
+      );
+
+      const text = await res.text();
+
+      console.log("INVENTORY STATUS:", res.status);
+      console.log("INVENTORY RESPONSE:", text);
+
+      if (!res.ok) {
+        throw new Error(`Inventory gagal: ${res.status}`);
+      }
+
+      const data = JSON.parse(text);
+      setInventory(data);
+    } catch (err) {
+      console.error("Inventory error:", err);
+    }
+  };
+  fetchInventory();
+}, []);
 
   const lowStockItems = inventory.filter(
     (item) => Number(item.qty) <= Number(item.minimum_stock),
